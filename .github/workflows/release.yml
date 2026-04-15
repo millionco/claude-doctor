@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate bot token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check for changesets
+        id: changesets
+        run: |
+          if ls .changeset/*.md 1>/dev/null 2>&1 && [ "$(ls .changeset/*.md 2>/dev/null | wc -l)" -gt 0 ]; then
+            HAS_CHANGESETS=false
+            for f in .changeset/*.md; do
+              if [ "$(basename "$f")" != "README.md" ]; then
+                HAS_CHANGESETS=true
+                break
+              fi
+            done
+            echo "has_changesets=$HAS_CHANGESETS" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changesets=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Version
+        if: steps.changesets.outputs.has_changesets == 'true'
+        run: pnpm run version
+      - name: Commit version bumps
+        if: steps.changesets.outputs.has_changesets == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Version Packages" || echo "No changes to commit"
+          git push
+      - name: Build
+        if: steps.changesets.outputs.has_changesets == 'true'
+        run: pnpm build
+      - name: Publish
+        if: steps.changesets.outputs.has_changesets == 'true'
+        run: pnpm changeset publish
+        env:
+          NPM_CONFIG_PROVENANCE: true

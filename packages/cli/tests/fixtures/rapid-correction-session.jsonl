@@ -1,0 +1,12 @@
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-04-01T10:00:00.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"add dark mode toggle to the settings page"},"uuid":"u1","parentUuid":null,"timestamp":"2026-04-01T10:00:01.000Z","sessionId":"rapid-001"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added dark mode to the homepage."}],"model":"claude-sonnet-4"},"uuid":"a1","parentUuid":"u1","timestamp":"2026-04-01T10:00:30.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"no, settings page, not homepage"},"uuid":"u2","parentUuid":"a1","timestamp":"2026-04-01T10:00:33.000Z","sessionId":"rapid-001"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Fixed, moved to settings."}],"model":"claude-sonnet-4"},"uuid":"a2","parentUuid":"u2","timestamp":"2026-04-01T10:01:00.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"the toggle is in the wrong section"},"uuid":"u3","parentUuid":"a2","timestamp":"2026-04-01T10:01:03.000Z","sessionId":"rapid-001"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Moved to appearance section."}],"model":"claude-sonnet-4"},"uuid":"a3","parentUuid":"u3","timestamp":"2026-04-01T10:01:30.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"it doesn't persist after refresh"},"uuid":"u4","parentUuid":"a3","timestamp":"2026-04-01T10:01:34.000Z","sessionId":"rapid-001"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added localStorage persistence."}],"model":"claude-sonnet-4"},"uuid":"a4","parentUuid":"u4","timestamp":"2026-04-01T10:02:00.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"now there's a flash of light theme on load"},"uuid":"u5","parentUuid":"a4","timestamp":"2026-04-01T10:02:04.000Z","sessionId":"rapid-001"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added script tag to head for FOUC prevention."}],"model":"claude-sonnet-4"},"uuid":"a5","parentUuid":"u5","timestamp":"2026-04-01T10:02:30.000Z","sessionId":"rapid-001"}
+{"type":"user","message":{"role":"user","content":"ok that works now"},"uuid":"u6","parentUuid":"a5","timestamp":"2026-04-01T10:02:35.000Z","sessionId":"rapid-001"}

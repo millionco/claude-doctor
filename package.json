@@ -1,0 +1,30 @@
+{
+  "name": "claude-optimizer",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "everything": "pnpm run build && pnpm run lint && pnpm run typecheck && pnpm run format && pnpm run check && pnpm run test",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint -- --fix",
+    "typecheck": "turbo run typecheck",
+    "format": "turbo format",
+    "format:check": "turbo format -- --check",
+    "check": "turbo check",
+    "test": "turbo test",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@typescript/native-preview": "7.0.0-dev.20260319.1",
+    "@voidzero-dev/vite-plus-core": "^0.1.12",
+    "turbo": "^2.8.17",
+    "typescript": "^5.7.0",
+    "vite-plus": "^0.1.12"
+  },
+  "packageManager": "pnpm@10.29.1"
+}

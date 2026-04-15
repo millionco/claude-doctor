@@ -1,0 +1,64 @@
+{
+  "name": "claude-optimizer",
+  "version": "0.0.1",
+  "description": "Analyze Claude Code transcripts for quality signals, sentiment drift, and behavioral anti-patterns.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "agents",
+    "sentiment",
+    "analysis",
+    "transcript",
+    "optimizer",
+    "ai",
+    "llm"
+  ],
+  "homepage": "https://github.com/aidenybai/claude-optimizer",
+  "bugs": {
+    "url": "https://github.com/aidenybai/claude-optimizer/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Aiden Bai",
+    "email": "aiden@million.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidenybai/claude-optimizer.git"
+  },
+  "bin": {
+    "claude-optimizer": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "sentiment": "^5.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
