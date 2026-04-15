@@ -2,7 +2,7 @@
 
 Analyzes your `~/.claude/` transcripts for behavioral anti-patterns and generates rules for CLAUDE.md / AGENTS.md from your history.
 
-![claude-doctor](.github/screenshot.png)
+https://github.com/user-attachments/assets/cdeb6b05-f3e6-441b-8bc2-9fcce623d9fd
 
 ## Install
 
