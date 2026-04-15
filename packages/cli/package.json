@@ -1,6 +1,6 @@
 {
   "name": "claude-doctor",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Analyze Claude Code transcripts for quality signals, sentiment drift, and behavioral anti-patterns.",
   "keywords": [
     "claude",
