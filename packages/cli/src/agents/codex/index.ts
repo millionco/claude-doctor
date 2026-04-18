@@ -18,7 +18,6 @@ import {
 import { TOP_SIGNALS_LIMIT } from "../../constants.js";
 
 interface CodexRunOptions {
-  session?: string;
   project?: string;
   rules?: boolean;
   save?: boolean;
@@ -123,17 +122,25 @@ export const runCodexReport = async (
     suggestions,
   };
 
-  const rulesText = generateAgentsRules(report.projects, report.totalSessions);
-  const rendered = await renderAnalyzeOutput(report);
-
   let modelDir: string | undefined;
   if (options.save) {
     modelDir = saveModel(report, options.dir, AGENT_NAME);
   }
 
   if (options.json) {
-    return { report, rulesText, rendered: formatReportJson(report), modelDir };
+    return {
+      report,
+      rulesText: "",
+      rendered: formatReportJson(report),
+      modelDir,
+    };
   }
 
+  const rulesText = generateAgentsRules(report.projects, report.totalSessions);
+  if (options.rules) {
+    return { report, rulesText, rendered: "", modelDir };
+  }
+
+  const rendered = await renderAnalyzeOutput(report);
   return { report, rulesText, rendered, modelDir };
 };

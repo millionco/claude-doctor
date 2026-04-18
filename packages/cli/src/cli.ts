@@ -88,7 +88,7 @@ program
         dir?: string;
       },
     ) => {
-      let agent: string = options.agent ?? "claude";
+      let agent: string = options.agent as string;
       let sessionArg: string | undefined;
 
       if (firstArg && isSupportedAgent(firstArg)) {

@@ -50,16 +50,7 @@ const parseToolArguments = (raw: unknown): Record<string, unknown> => {
 
 const flattenOutput = (output: unknown): string => {
   if (typeof output === "string") return output;
-  if (Array.isArray(output)) {
-    const parts: string[] = [];
-    for (const block of output) {
-      if (!block || typeof block !== "object") continue;
-      const blockRecord = block as Record<string, unknown>;
-      const text = blockRecord.text ?? blockRecord.input_text;
-      if (typeof text === "string") parts.push(text);
-    }
-    return parts.join("\n");
-  }
+  if (Array.isArray(output)) return extractTextFromContent(output);
   if (output && typeof output === "object") {
     try {
       return JSON.stringify(output);
@@ -140,7 +131,6 @@ export const readCodexSessionHeader = async (
 interface NormalizerState {
   events: Record<string, unknown>[];
   sessionId: string;
-  toolCallSeenUserAfter: Set<string>;
   lastAgentMessage?: string;
 }
 
@@ -228,7 +218,6 @@ const pushToolResult = (
       ],
     },
   });
-  state.toolCallSeenUserAfter.add(callId);
 };
 
 const pushInterrupt = (state: NormalizerState, timestamp: string): void => {
@@ -346,7 +335,6 @@ export const normalizeCodexRollout = async (
   const state: NormalizerState = {
     events: [],
     sessionId: header.sessionId,
-    toolCallSeenUserAfter: new Set(),
   };
 
   const stream = fs.createReadStream(rolloutPath, { encoding: "utf-8" });
