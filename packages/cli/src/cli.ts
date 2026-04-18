@@ -16,8 +16,9 @@ import {
 import { generateAgentsRules } from "./suggestions.js";
 import { runCodexCheck, runCodexReport } from "./agents/codex/index.js";
 import { runDroidCheck, runDroidReport } from "./agents/droid/index.js";
+import { runPiCheck, runPiReport } from "./agents/pi/index.js";
 
-const SUPPORTED_AGENTS = ["claude", "codex", "droid"] as const;
+const SUPPORTED_AGENTS = ["claude", "codex", "droid", "pi"] as const;
 type SupportedAgent = (typeof SUPPORTED_AGENTS)[number];
 
 const isSupportedAgent = (value: string): value is SupportedAgent =>
@@ -59,12 +60,12 @@ const program = new Command();
 program
   .name("claude-doctor")
   .description(
-    "Diagnose your agent sessions (Claude by default; `codex` and `droid` also supported). Analyzes transcripts for behavioral anti-patterns and generates rules for CLAUDE.md / AGENTS.md.",
+    "Diagnose your agent sessions (Claude by default; `codex`, `droid`, and `pi` also supported). Analyzes transcripts for behavioral anti-patterns and generates rules for CLAUDE.md / AGENTS.md.",
   )
   .version("0.0.1")
   .argument(
     "[agent-or-session]",
-    "Agent name (claude, codex, droid) or session ID / .jsonl path when using default agent",
+    "Agent name (claude, codex, droid, pi) or session ID / .jsonl path when using default agent",
   )
   .argument(
     "[session]",
@@ -72,7 +73,7 @@ program
   )
   .option(
     "-a, --agent <name>",
-    "Agent to analyze (claude, codex, droid)",
+    "Agent to analyze (claude, codex, droid, pi)",
     "claude",
   )
   .option("-p, --project <path>", "Filter to a specific project path")
@@ -123,6 +124,11 @@ program
 
       if (agent === "droid") {
         await runDroidFlow(sessionArg, options);
+        return;
+      }
+
+      if (agent === "pi") {
+        await runPiFlow(sessionArg, options);
         return;
       }
 
@@ -199,10 +205,16 @@ program
 
       if (options.save) {
         const modelDir = saveModel(report, options.dir);
-        console.log(
-          `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
-        );
-        console.log("");
+        if (options.json) {
+          console.error(
+            `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+          );
+        } else {
+          console.log(
+            `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+          );
+          console.log("");
+        }
       }
 
       if (options.rules) {
@@ -274,10 +286,16 @@ const runCodexFlow = async (
   spinner.stop();
 
   if (modelDir) {
-    console.log(
-      `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
-    );
-    console.log("");
+    if (options.json) {
+      console.error(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+    } else {
+      console.log(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+      console.log("");
+    }
   }
 
   if (options.rules) {
@@ -339,10 +357,87 @@ const runDroidFlow = async (
   spinner.stop();
 
   if (modelDir) {
-    console.log(
-      `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
-    );
-    console.log("");
+    if (options.json) {
+      console.error(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+    } else {
+      console.log(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+      console.log("");
+    }
+  }
+
+  if (options.rules) {
+    if (rulesText) {
+      console.log(rulesText);
+    } else {
+      console.log("No rules to generate — sessions look healthy.");
+    }
+    return;
+  }
+
+  console.log(rendered);
+};
+
+const runPiFlow = async (
+  sessionArg: string | undefined,
+  options: {
+    project?: string;
+    rules?: boolean;
+    save?: boolean;
+    json?: boolean;
+    dir?: string;
+  },
+): Promise<void> => {
+  if (sessionArg) {
+    const spinner = createSpinner();
+    spinner.start("Checking Pi session…");
+    try {
+      const output = await runPiCheck(sessionArg, {
+        project: options.project,
+        json: options.json,
+        dir: options.dir,
+      });
+      spinner.stop();
+      console.log(output);
+    } catch (error) {
+      spinner.stop();
+      console.error((error as Error).message);
+      process.exit(1);
+    }
+    return;
+  }
+
+  const spinner = createSpinner();
+  spinner.start("Scanning Pi transcripts…");
+
+  const { report, rulesText, rendered, modelDir } = await runPiReport({
+    project: options.project,
+    rules: options.rules,
+    save: options.save,
+    json: options.json,
+    dir: options.dir,
+    onProgress: (current, total, projectName) => {
+      const shortName = projectName.replace(/^Users-[^-]+-Developer-/, "");
+      spinner.update(`Analyzing ${shortName} (${current}/${total})`);
+    },
+  });
+
+  spinner.stop();
+
+  if (modelDir) {
+    if (options.json) {
+      console.error(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+    } else {
+      console.log(
+        `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+      );
+      console.log("");
+    }
   }
 
   if (options.rules) {
