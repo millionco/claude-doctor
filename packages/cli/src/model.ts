@@ -24,9 +24,38 @@ export const getModelDir = (projectRoot?: string): string => {
   return path.join(root, MODEL_DIR);
 };
 
+const DEFAULT_AGENT = "claude";
+
+const readModelFile = (
+  modelPath: string,
+): { agents: Record<string, SavedModel> } => {
+  if (!fs.existsSync(modelPath)) {
+    return { agents: {} };
+  }
+
+  const content = fs.readFileSync(modelPath, "utf-8");
+  const parsed = JSON.parse(content);
+
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    parsed.agents &&
+    typeof parsed.agents === "object"
+  ) {
+    return { agents: parsed.agents as Record<string, SavedModel> };
+  }
+
+  return {
+    agents: {
+      [DEFAULT_AGENT]: parsed as SavedModel,
+    },
+  };
+};
+
 export const saveModel = (
   report: AnalysisReport,
   projectRoot?: string,
+  agent: string = DEFAULT_AGENT,
 ): string => {
   const modelDir = getModelDir(projectRoot);
   fs.mkdirSync(modelDir, { recursive: true });
@@ -68,7 +97,9 @@ export const saveModel = (
   };
 
   const modelPath = path.join(modelDir, MODEL_FILE);
-  fs.writeFileSync(modelPath, JSON.stringify(model, null, 2));
+  const existing = readModelFile(modelPath);
+  existing.agents[agent] = model;
+  fs.writeFileSync(modelPath, JSON.stringify(existing, null, 2));
 
   const guidancePath = path.join(modelDir, GUIDANCE_FILE);
   const guidance = buildGuidanceDoc(model);
@@ -77,11 +108,18 @@ export const saveModel = (
   return modelDir;
 };
 
-export const loadModel = (projectRoot?: string): SavedModel | undefined => {
+export const loadModel = (
+  projectRoot?: string,
+  agent: string = DEFAULT_AGENT,
+): SavedModel | undefined => {
   const modelPath = path.join(getModelDir(projectRoot), MODEL_FILE);
-  if (!fs.existsSync(modelPath)) return undefined;
-  const content = fs.readFileSync(modelPath, "utf-8");
-  return JSON.parse(content) as SavedModel;
+
+  if (!fs.existsSync(modelPath)) {
+    return undefined;
+  }
+
+  const existing = readModelFile(modelPath);
+  return existing.agents[agent];
 };
 
 const buildGuidanceDoc = (model: SavedModel): string => {
@@ -109,8 +147,7 @@ const buildGuidanceDoc = (model: SavedModel): string => {
   );
   lines.push("");
 
-  const hasSignal = (name: string) =>
-    (model.signalBaselines[name] ?? 0) > 0;
+  const hasSignal = (name: string) => (model.signalBaselines[name] ?? 0) > 0;
 
   if (hasSignal("edit-thrashing")) {
     lines.push(
@@ -197,8 +234,7 @@ export const checkSession = async (
 
   const isHealthy =
     signals.filter(
-      (signal) =>
-        signal.severity === "critical" || signal.severity === "high",
+      (signal) => signal.severity === "critical" || signal.severity === "high",
     ).length === 0;
 
   return {
@@ -259,7 +295,10 @@ const buildSessionGuidance = (
     );
   }
 
-  if (signalNames.has("negative-sentiment") || signalNames.has("extreme-frustration")) {
+  if (
+    signalNames.has("negative-sentiment") ||
+    signalNames.has("extreme-frustration")
+  ) {
     guidance.push(
       "The user is frustrated. Acknowledge the issue, ask clarifying questions if needed, and focus on getting it right this time.",
     );

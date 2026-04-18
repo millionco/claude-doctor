@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import {
-  generateReport,
-  formatReportJson,
-} from "./reporter.js";
+import { generateReport, formatReportJson } from "./reporter.js";
 import {
   saveModel,
   loadModel,
@@ -17,6 +14,13 @@ import {
   renderAnalyzeOutput,
 } from "./viz.js";
 import { generateAgentsRules } from "./suggestions.js";
+import { runCodexCheck, runCodexReport } from "./agents/codex/index.js";
+
+const SUPPORTED_AGENTS = ["claude", "codex"] as const;
+type SupportedAgent = (typeof SUPPORTED_AGENTS)[number];
+
+const isSupportedAgent = (value: string): value is SupportedAgent =>
+  (SUPPORTED_AGENTS as readonly string[]).includes(value);
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const DIM = "\x1b[2m";
@@ -54,22 +58,29 @@ const program = new Command();
 program
   .name("claude-doctor")
   .description(
-    "Diagnose your Claude Code sessions. Analyzes transcripts for behavioral anti-patterns and generates rules for CLAUDE.md / AGENTS.md.",
+    "Diagnose your agent sessions (Claude by default; `codex` also supported). Analyzes transcripts for behavioral anti-patterns and generates rules for CLAUDE.md / AGENTS.md.",
   )
   .version("0.0.1")
-  .argument("[session]", "Session ID or .jsonl path to check a specific session")
+  .argument(
+    "[agent-or-session]",
+    "Agent name (claude, codex) or session ID / .jsonl path when using default agent",
+  )
+  .argument(
+    "[session]",
+    "Session ID or .jsonl path to check a specific session (when first arg is an agent name)",
+  )
+  .option("-a, --agent <name>", "Agent to analyze (claude, codex)", "claude")
   .option("-p, --project <path>", "Filter to a specific project path")
   .option("--rules", "Output rules for CLAUDE.md / AGENTS.md")
   .option("--save", "Save analysis model to .claude-doctor/")
   .option("--json", "Output as JSON")
-  .option(
-    "-d, --dir <path>",
-    "Project root for .claude-doctor/",
-  )
+  .option("-d, --dir <path>", "Project root for .claude-doctor/")
   .action(
     async (
-      sessionArg: string | undefined,
+      firstArg: string | undefined,
+      secondArg: string | undefined,
       options: {
+        agent?: string;
         project?: string;
         rules?: boolean;
         save?: boolean;
@@ -77,11 +88,40 @@ program
         dir?: string;
       },
     ) => {
+      let agent: string = options.agent ?? "claude";
+      let sessionArg: string | undefined;
+
+      if (firstArg && isSupportedAgent(firstArg)) {
+        agent = firstArg;
+        sessionArg = secondArg;
+      } else {
+        sessionArg = firstArg;
+        if (secondArg) {
+          console.error(
+            `Unexpected positional argument: ${secondArg}. Did you mean \`claude-doctor <agent> ${secondArg}\`?`,
+          );
+          process.exit(1);
+        }
+      }
+
+      if (!isSupportedAgent(agent)) {
+        console.error(
+          `Unknown agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(", ")}.`,
+        );
+        process.exit(1);
+      }
+
+      if (agent === "codex") {
+        await runCodexFlow(sessionArg, options);
+        return;
+      }
+
       if (sessionArg) {
         const spinner = createSpinner();
         spinner.start("Checking session…");
 
-        const isFilePath = sessionArg.includes("/") || sessionArg.endsWith(".jsonl");
+        const isFilePath =
+          sessionArg.includes("/") || sessionArg.endsWith(".jsonl");
         let sessionFilePath: string;
         let sessionId: string;
 
@@ -101,7 +141,11 @@ program
         }
 
         const savedModel = loadModel(options.dir);
-        const result = await checkSession(sessionFilePath, sessionId, savedModel);
+        const result = await checkSession(
+          sessionFilePath,
+          sessionId,
+          savedModel,
+        );
 
         if (options.json) {
           spinner.stop();
@@ -137,9 +181,7 @@ program
             /^Users\/[^/]+\/Developer\//,
             "",
           );
-          spinner.update(
-            `Analyzing ${shortName} (${current}/${total})`,
-          );
+          spinner.update(`Analyzing ${shortName} (${current}/${total})`);
         },
       );
 
@@ -174,5 +216,70 @@ program
       console.log(await renderAnalyzeOutput(report));
     },
   );
+
+const runCodexFlow = async (
+  sessionArg: string | undefined,
+  options: {
+    project?: string;
+    rules?: boolean;
+    save?: boolean;
+    json?: boolean;
+    dir?: string;
+  },
+): Promise<void> => {
+  if (sessionArg) {
+    const spinner = createSpinner();
+    spinner.start("Checking Codex session…");
+    try {
+      const output = await runCodexCheck(sessionArg, {
+        project: options.project,
+        json: options.json,
+        dir: options.dir,
+      });
+      spinner.stop();
+      console.log(output);
+    } catch (error) {
+      spinner.stop();
+      console.error((error as Error).message);
+      process.exit(1);
+    }
+    return;
+  }
+
+  const spinner = createSpinner();
+  spinner.start("Scanning Codex transcripts…");
+
+  const { report, rulesText, rendered, modelDir } = await runCodexReport({
+    project: options.project,
+    rules: options.rules,
+    save: options.save,
+    json: options.json,
+    dir: options.dir,
+    onProgress: (current, total, projectName) => {
+      const shortName = projectName.replace(/^Users-[^-]+-Developer-/, "");
+      spinner.update(`Analyzing ${shortName} (${current}/${total})`);
+    },
+  });
+
+  spinner.stop();
+
+  if (modelDir) {
+    console.log(
+      `Model saved to ${modelDir}/ (${report.totalSessions} sessions, ${report.totalProjects} projects)`,
+    );
+    console.log("");
+  }
+
+  if (options.rules) {
+    if (rulesText) {
+      console.log(rulesText);
+    } else {
+      console.log("No rules to generate — sessions look healthy.");
+    }
+    return;
+  }
+
+  console.log(rendered);
+};
 
 program.parse();
