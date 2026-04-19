@@ -1,7 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
-import { PI_CACHE_DIR, PI_SKIPPED_ENTRY_TYPES } from "./constants.js";
+import {
+  PI_CACHE_DIR,
+  PI_NORMALIZED_SESSION_VERSION,
+  PI_SKIPPED_ENTRY_TYPES,
+} from "./constants.js";
 
 interface PiSessionHeader {
   sessionId: string;
@@ -293,7 +297,10 @@ export const normalizePiSession = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(PI_CACHE_DIR, `${sessionId}.jsonl`);
+  path.join(
+    PI_CACHE_DIR,
+    `${sessionId}.v${PI_NORMALIZED_SESSION_VERSION}.jsonl`,
+  );
 
 export const ensureNormalizedSession = async (
   sessionPath: string,

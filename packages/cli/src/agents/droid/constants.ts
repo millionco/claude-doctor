@@ -11,6 +11,7 @@ export const DROID_CACHE_DIR = path.join(
   "droid",
 );
 
+export const DROID_NORMALIZED_SESSION_VERSION = 1;
 export const DROID_ENVIRONMENT_TEXT_PATTERNS: RegExp[] = [
   /^<system-reminder>/,
   /^<system-notification>/,

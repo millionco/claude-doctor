@@ -11,9 +11,13 @@ export const CODEX_CACHE_DIR = path.join(
   "codex",
 );
 
+export const CODEX_NORMALIZED_SESSION_VERSION = 1;
+
 export const CODEX_TOOL_ERROR_PATTERNS: RegExp[] = [
   /^\s*error[:\s]/i,
   /^\s*Error:/,
+  /^failed in /i,
+  /^[\w.-]+ failed:/i,
   /"exit_code"\s*:\s*[1-9]/,
   /command failed/i,
   /permission denied/i,

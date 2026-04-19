@@ -5,6 +5,7 @@ import {
   DROID_CACHE_DIR,
   DROID_ENVIRONMENT_TEXT_PATTERNS,
   DROID_INTERRUPT_MESSAGES,
+  DROID_NORMALIZED_SESSION_VERSION,
   DROID_SKIPPED_EVENT_TYPES,
 } from "./constants.js";
 
@@ -199,7 +200,10 @@ export const normalizeDroidSession = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(DROID_CACHE_DIR, `${sessionId}.jsonl`);
+  path.join(
+    DROID_CACHE_DIR,
+    `${sessionId}.v${DROID_NORMALIZED_SESSION_VERSION}.jsonl`,
+  );
 
 export const ensureNormalizedSession = async (
   sessionPath: string,

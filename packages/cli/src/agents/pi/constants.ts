@@ -12,6 +12,7 @@ export const PI_CACHE_DIR = path.join(
   "pi",
 );
 
+export const PI_NORMALIZED_SESSION_VERSION = 1;
 export const PI_SKIPPED_ENTRY_TYPES = new Set([
   "model_change",
   "thinking_level_change",

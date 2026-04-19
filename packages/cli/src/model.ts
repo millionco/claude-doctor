@@ -17,7 +17,6 @@ import { detectBehavioralSignals } from "./signals/behavioral.js";
 
 const MODEL_DIR = ".claude-doctor";
 const MODEL_FILE = "model.json";
-const GUIDANCE_FILE = "guidance.md";
 
 export const getModelDir = (projectRoot?: string): string => {
   const root = projectRoot ?? process.cwd();
@@ -25,6 +24,8 @@ export const getModelDir = (projectRoot?: string): string => {
 };
 
 const DEFAULT_AGENT = "claude";
+
+const getGuidanceFileName = (agent: string): string => `guidance-${agent}.md`;
 
 const readModelFile = (
   modelPath: string,
@@ -101,7 +102,7 @@ export const saveModel = (
   existing.agents[agent] = model;
   fs.writeFileSync(modelPath, JSON.stringify(existing, null, 2));
 
-  const guidancePath = path.join(modelDir, GUIDANCE_FILE);
+  const guidancePath = path.join(modelDir, getGuidanceFileName(agent));
   const guidance = buildGuidanceDoc(model);
   fs.writeFileSync(guidancePath, guidance);
 
@@ -206,6 +207,7 @@ export const checkSession = async (
   sessionFilePath: string,
   sessionId: string,
   savedModel?: SavedModel,
+  agent: string = DEFAULT_AGENT,
 ): Promise<CheckResult> => {
   const signals: SignalResult[] = [];
 
@@ -230,7 +232,7 @@ export const checkSession = async (
   );
   signals.push(...behavioralSignals);
 
-  const guidance = buildSessionGuidance(signals, savedModel);
+  const guidance = buildSessionGuidance(signals, savedModel, agent);
 
   const isHealthy =
     signals.filter(
@@ -248,6 +250,7 @@ export const checkSession = async (
 const buildSessionGuidance = (
   signals: SignalResult[],
   savedModel?: SavedModel,
+  agent: string = DEFAULT_AGENT,
 ): string[] => {
   const guidance: string[] = [];
 
@@ -317,7 +320,7 @@ const buildSessionGuidance = (
     );
     if (matchingHistorical.length > 0) {
       guidance.push(
-        `This session is repeating known issues from past sessions: ${matchingHistorical.map((signal) => signal.signalName).join(", ")}. Check .claude-doctor/guidance.md for project-specific rules.`,
+        `This session is repeating known issues from past sessions: ${matchingHistorical.map((signal) => signal.signalName).join(", ")}. Check ${MODEL_DIR}/${getGuidanceFileName(agent)} for project-specific rules.`,
       );
     }
   }

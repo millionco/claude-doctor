@@ -53,7 +53,12 @@ export const runPiCheck = async (
 
   const cachedPath = await ensureNormalizedSession(resolved.sessionPath, header);
   const savedModel = loadModel(options.dir, AGENT_NAME);
-  const result = await checkSession(cachedPath, resolved.sessionId, savedModel);
+  const result = await checkSession(
+    cachedPath,
+    resolved.sessionId,
+    savedModel,
+    AGENT_NAME,
+  );
 
   if (options.json) {
     return JSON.stringify(result, null, 2);
@@ -122,6 +127,11 @@ export const runPiReport = async (
     modelDir = saveModel(report, options.dir, AGENT_NAME);
   }
 
+  const rulesText = generateAgentsRules(report.projects, report.totalSessions);
+  if (options.rules) {
+    return { report, rulesText, rendered: "", modelDir };
+  }
+
   if (options.json) {
     return {
       report,
@@ -129,11 +139,6 @@ export const runPiReport = async (
       rendered: formatReportJson(report),
       modelDir,
     };
-  }
-
-  const rulesText = generateAgentsRules(report.projects, report.totalSessions);
-  if (options.rules) {
-    return { report, rulesText, rendered: "", modelDir };
   }
 
   const rendered = await renderAnalyzeOutput(report);

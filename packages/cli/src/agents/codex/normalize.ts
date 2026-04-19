@@ -4,6 +4,7 @@ import * as readline from "node:readline";
 import {
   CODEX_CACHE_DIR,
   CODEX_ENVIRONMENT_TEXT_PATTERNS,
+  CODEX_NORMALIZED_SESSION_VERSION,
   CODEX_TOOL_ERROR_PATTERNS,
 } from "./constants.js";
 
@@ -29,8 +30,66 @@ const extractTextFromContent = (content: unknown): string => {
 const isEnvironmentText = (text: string): boolean =>
   CODEX_ENVIRONMENT_TEXT_PATTERNS.some((pattern) => pattern.test(text));
 
-const isErrorOutput = (text: string): boolean =>
-  CODEX_TOOL_ERROR_PATTERNS.some((pattern) => pattern.test(text));
+const parseToolExitCode = (outputText: string): number | undefined => {
+  const exitCodeMatch = outputText.match(/Process exited with code (\d+)/);
+  if (!exitCodeMatch) return undefined;
+  return Number.parseInt(exitCodeMatch[1], 10);
+};
+
+const inferToolFailureFromText = (outputText: string): boolean => {
+  const parsedExitCode = parseToolExitCode(outputText);
+  if (parsedExitCode !== undefined) return parsedExitCode !== 0;
+  return CODEX_TOOL_ERROR_PATTERNS.some((pattern) => pattern.test(outputText));
+};
+
+const extractStructuredToolOutput = (
+  payload: Record<string, unknown>,
+): string => {
+  const candidateFields = [
+    payload.aggregated_output,
+    payload.stderr,
+    payload.stdout,
+    payload.formatted_output,
+  ];
+
+  for (const candidateField of candidateFields) {
+    if (typeof candidateField !== "string") continue;
+    if (candidateField.trim()) return candidateField;
+  }
+
+  return "";
+};
+
+const inferStructuredToolFailure = (
+  payload: Record<string, unknown>,
+  outputText: string,
+): boolean => {
+  if (typeof payload.exit_code === "number") return payload.exit_code !== 0;
+  if (payload.status === "failed") return true;
+  if (payload.status === "completed") return false;
+  return inferToolFailureFromText(outputText);
+};
+
+const choosePreferredToolOutput = (
+  existingOutputText: string,
+  nextOutputText: string,
+): string => {
+  if (!nextOutputText.trim()) return existingOutputText;
+  if (!existingOutputText.trim()) return nextOutputText;
+
+  const nextIncludesExitCode = nextOutputText.includes(
+    "Process exited with code",
+  );
+  const existingIncludesExitCode = existingOutputText.includes(
+    "Process exited with code",
+  );
+
+  if (nextIncludesExitCode && !existingIncludesExitCode) {
+    return nextOutputText;
+  }
+
+  return existingOutputText;
+};
 
 const parseToolArguments = (raw: unknown): Record<string, unknown> => {
   if (typeof raw !== "string") {
@@ -128,10 +187,15 @@ export const readCodexSessionHeader = async (
   return undefined;
 };
 
+interface TrackedToolResult {
+  eventIndex: number;
+}
+
 interface NormalizerState {
   events: Record<string, unknown>[];
   sessionId: string;
   lastAgentMessage?: string;
+  toolResultsByCallId: Record<string, TrackedToolResult>;
 }
 
 const pushUserText = (
@@ -201,7 +265,7 @@ const pushToolResult = (
   callId: string,
   outputText: string,
   isError: boolean,
-): void => {
+): number => {
   state.events.push({
     type: "user",
     sessionId: state.sessionId,
@@ -218,6 +282,54 @@ const pushToolResult = (
       ],
     },
   });
+
+  return state.events.length - 1;
+};
+
+const updateToolResult = (
+  state: NormalizerState,
+  trackedToolResult: TrackedToolResult,
+  timestamp: string,
+  outputText: string,
+  isError: boolean,
+  shouldReplaceErrorState: boolean,
+): void => {
+  const event = state.events[trackedToolResult.eventIndex];
+  if (!event || typeof event !== "object") return;
+
+  const eventRecord = event as Record<string, unknown>;
+  const message = eventRecord.message;
+  if (!message || typeof message !== "object") return;
+
+  const messageRecord = message as Record<string, unknown>;
+  const content = Array.isArray(messageRecord.content)
+    ? messageRecord.content
+    : undefined;
+  if (!content || content.length === 0) return;
+
+  const toolResultBlock = content[0];
+  if (!toolResultBlock || typeof toolResultBlock !== "object") return;
+
+  const toolResultRecord = toolResultBlock as Record<string, unknown>;
+  const existingOutputText =
+    typeof toolResultRecord.content === "string"
+      ? toolResultRecord.content
+      : "";
+  toolResultRecord.content = choosePreferredToolOutput(
+    existingOutputText,
+    outputText,
+  );
+
+  if (shouldReplaceErrorState || isError) {
+    toolResultRecord.is_error = isError;
+  }
+
+  if (
+    typeof eventRecord.timestamp !== "string" ||
+    eventRecord.timestamp > timestamp
+  ) {
+    eventRecord.timestamp = timestamp;
+  }
 };
 
 const pushInterrupt = (state: NormalizerState, timestamp: string): void => {
@@ -276,18 +388,38 @@ const handleResponseItem = (
     payloadType === "function_call_output" ||
     payloadType === "custom_tool_call_output"
   ) {
-    const callId =
-      typeof payload.call_id === "string"
-        ? payload.call_id
-        : `call_${state.events.length}`;
+    const explicitCallId =
+      typeof payload.call_id === "string" ? payload.call_id : undefined;
+    const callId = explicitCallId ?? `call_${state.events.length}`;
     const outputText = flattenOutput(payload.output);
-    pushToolResult(
+    const isError = inferToolFailureFromText(outputText);
+    const trackedToolResult = explicitCallId
+      ? state.toolResultsByCallId[explicitCallId]
+      : undefined;
+
+    if (trackedToolResult) {
+      updateToolResult(
+        state,
+        trackedToolResult,
+        timestamp,
+        outputText,
+        isError,
+        false,
+      );
+      return;
+    }
+
+    const eventIndex = pushToolResult(
       state,
       timestamp,
       callId,
       outputText,
-      isErrorOutput(outputText),
+      isError,
     );
+
+    if (explicitCallId) {
+      state.toolResultsByCallId[explicitCallId] = { eventIndex };
+    }
     return;
   }
 };
@@ -298,6 +430,44 @@ const handleEventMsg = (
   payload: Record<string, unknown>,
 ): void => {
   const payloadType = payload.type;
+
+  if (payloadType === "exec_command_end") {
+    const explicitCallId =
+      typeof payload.call_id === "string" ? payload.call_id : undefined;
+    const callId = explicitCallId ?? `call_${state.events.length}`;
+    const outputText = extractStructuredToolOutput(payload);
+    const isError = inferStructuredToolFailure(payload, outputText);
+    const trackedToolResult = explicitCallId
+      ? state.toolResultsByCallId[explicitCallId]
+      : undefined;
+
+    if (trackedToolResult) {
+      updateToolResult(
+        state,
+        trackedToolResult,
+        timestamp,
+        outputText,
+        isError,
+        true,
+      );
+      return;
+    }
+
+    if (outputText.trim() || isError) {
+      const eventIndex = pushToolResult(
+        state,
+        timestamp,
+        callId,
+        outputText,
+        isError,
+      );
+
+      if (explicitCallId) {
+        state.toolResultsByCallId[explicitCallId] = { eventIndex };
+      }
+    }
+    return;
+  }
 
   if (payloadType === "turn_aborted" || payloadType === "error") {
     pushInterrupt(state, timestamp);
@@ -335,6 +505,7 @@ export const normalizeCodexRollout = async (
   const state: NormalizerState = {
     events: [],
     sessionId: header.sessionId,
+    toolResultsByCallId: {},
   };
 
   const stream = fs.createReadStream(rolloutPath, { encoding: "utf-8" });
@@ -390,7 +561,10 @@ export const normalizeCodexRollout = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(CODEX_CACHE_DIR, `${sessionId}.jsonl`);
+  path.join(
+    CODEX_CACHE_DIR,
+    `${sessionId}.v${CODEX_NORMALIZED_SESSION_VERSION}.jsonl`,
+  );
 
 export const ensureNormalizedSession = async (
   rolloutPath: string,
