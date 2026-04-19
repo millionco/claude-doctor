@@ -10,12 +10,8 @@ const makeSession = (
   projectPath: "/test/project",
   projectName: "test-project",
   filePath: `/tmp/${sessionId}.jsonl`,
-  startTime: new Date(
-    Date.UTC(2026, 3, 1, 10, startMinutesOffset, 0),
-  ),
-  endTime: new Date(
-    Date.UTC(2026, 3, 1, 10, startMinutesOffset + 5, 0),
-  ),
+  startTime: new Date(Date.UTC(2026, 3, 1, 10, startMinutesOffset, 0)),
+  endTime: new Date(Date.UTC(2026, 3, 1, 10, startMinutesOffset + 5, 0)),
   userMessageCount,
   assistantMessageCount: userMessageCount,
   toolCallCount: userMessageCount * 2,
@@ -42,9 +38,7 @@ describe("detectAbandonment", () => {
       makeSession("s4", 15, 1),
     ];
     const signals = detectAbandonment(sessions);
-    const clusterSignals = signals.filter(
-      (signal) => signal.signalName === "restart-cluster",
-    );
+    const clusterSignals = signals.filter((signal) => signal.signalName === "restart-cluster");
     expect(clusterSignals.length).toBe(1);
     expect(clusterSignals[0].score).toBe(-4);
   });
@@ -58,9 +52,7 @@ describe("detectAbandonment", () => {
       makeSession("s5", 12, 1),
     ];
     const signals = detectAbandonment(sessions);
-    const clusterSignals = signals.filter(
-      (signal) => signal.signalName === "restart-cluster",
-    );
+    const clusterSignals = signals.filter((signal) => signal.signalName === "restart-cluster");
     expect(clusterSignals[0].severity).toBe("critical");
   });
 
@@ -104,9 +96,7 @@ describe("detectAbandonment", () => {
       makeSession("s6", 130, 1),
     ];
     const signals = detectAbandonment(sessions);
-    const clusterSignals = signals.filter(
-      (signal) => signal.signalName === "restart-cluster",
-    );
+    const clusterSignals = signals.filter((signal) => signal.signalName === "restart-cluster");
     expect(clusterSignals.length).toBe(2);
   });
 

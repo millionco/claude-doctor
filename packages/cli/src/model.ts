@@ -1,15 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import {
-  CLAUDE_PROJECTS_DIR,
-  MODEL_TOP_ISSUES_LIMIT,
-  SAVED_MODEL_VERSION,
-} from "./constants.js";
-import {
-  analyzeSessionSentiment,
-  sentimentToSignals,
-} from "./signals/sentiment.js";
+import { CLAUDE_PROJECTS_DIR, MODEL_TOP_ISSUES_LIMIT, SAVED_MODEL_VERSION } from "./constants.js";
+import { analyzeSessionSentiment, sentimentToSignals } from "./signals/sentiment.js";
 import { detectThrashing } from "./signals/thrashing.js";
 import { detectErrorLoops } from "./signals/error-loops.js";
 import { detectToolInefficiency } from "./signals/tool-efficiency.js";
@@ -27,9 +20,7 @@ const DEFAULT_AGENT = "claude";
 
 const getGuidanceFileName = (agent: string): string => `guidance-${agent}.md`;
 
-const readModelFile = (
-  modelPath: string,
-): { agents: Record<string, SavedModel> } => {
+const readModelFile = (modelPath: string): { agents: Record<string, SavedModel> } => {
   if (!fs.existsSync(modelPath)) {
     return { agents: {} };
   }
@@ -37,12 +28,7 @@ const readModelFile = (
   const content = fs.readFileSync(modelPath, "utf-8");
   const parsed = JSON.parse(content);
 
-  if (
-    parsed &&
-    typeof parsed === "object" &&
-    parsed.agents &&
-    typeof parsed.agents === "object"
-  ) {
+  if (parsed && typeof parsed === "object" && parsed.agents && typeof parsed.agents === "object") {
     return { agents: parsed.agents as Record<string, SavedModel> };
   }
 
@@ -63,15 +49,13 @@ export const saveModel = (
 
   const signalBaselines: Record<string, number> = {};
   for (const signal of report.topSignals) {
-    signalBaselines[signal.signalName] =
-      (signalBaselines[signal.signalName] ?? 0) + 1;
+    signalBaselines[signal.signalName] = (signalBaselines[signal.signalName] ?? 0) + 1;
   }
 
   const projects: ProjectProfile[] = report.projects.map((project) => {
     const signalFrequency: Record<string, number> = {};
     for (const signal of project.signals) {
-      signalFrequency[signal.signalName] =
-        (signalFrequency[signal.signalName] ?? 0) + 1;
+      signalFrequency[signal.signalName] = (signalFrequency[signal.signalName] ?? 0) + 1;
     }
 
     return {
@@ -143,9 +127,7 @@ const buildGuidanceDoc = (model: SavedModel): string => {
   lines.push("");
   lines.push("## Rules for This Session");
   lines.push("");
-  lines.push(
-    "If you notice yourself exhibiting any of these patterns, STOP and course-correct:",
-  );
+  lines.push("If you notice yourself exhibiting any of these patterns, STOP and course-correct:");
   lines.push("");
 
   const hasSignal = (name: string) => (model.signalBaselines[name] ?? 0) > 0;
@@ -220,24 +202,17 @@ export const checkSession = async (
   const errorLoopSignals = await detectErrorLoops(sessionFilePath, sessionId);
   signals.push(...errorLoopSignals);
 
-  const efficiencySignals = await detectToolInefficiency(
-    sessionFilePath,
-    sessionId,
-  );
+  const efficiencySignals = await detectToolInefficiency(sessionFilePath, sessionId);
   signals.push(...efficiencySignals);
 
-  const behavioralSignals = await detectBehavioralSignals(
-    sessionFilePath,
-    sessionId,
-  );
+  const behavioralSignals = await detectBehavioralSignals(sessionFilePath, sessionId);
   signals.push(...behavioralSignals);
 
   const guidance = buildSessionGuidance(signals, savedModel, agent);
 
   const isHealthy =
-    signals.filter(
-      (signal) => signal.severity === "critical" || signal.severity === "high",
-    ).length === 0;
+    signals.filter((signal) => signal.severity === "critical" || signal.severity === "high")
+      .length === 0;
 
   return {
     sessionId,
@@ -298,10 +273,7 @@ const buildSessionGuidance = (
     );
   }
 
-  if (
-    signalNames.has("negative-sentiment") ||
-    signalNames.has("extreme-frustration")
-  ) {
+  if (signalNames.has("negative-sentiment") || signalNames.has("extreme-frustration")) {
     guidance.push(
       "The user is frustrated. Acknowledge the issue, ask clarifying questions if needed, and focus on getting it right this time.",
     );
@@ -351,10 +323,7 @@ export const findLatestSession = (
     const fullDir = path.join(projectsDir, projectDir);
     const files = fs
       .readdirSync(fullDir)
-      .filter(
-        (fileName) =>
-          fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"),
-      );
+      .filter((fileName) => fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"));
 
     for (const file of files) {
       const filePath = path.join(fullDir, file);

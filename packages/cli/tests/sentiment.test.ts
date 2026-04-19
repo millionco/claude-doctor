@@ -1,19 +1,12 @@
 import * as path from "node:path";
 import { describe, it, expect } from "vite-plus/test";
-import {
-  analyzeSessionSentiment,
-  sentimentToSignals,
-} from "../src/signals/sentiment.js";
+import { analyzeSessionSentiment, sentimentToSignals } from "../src/signals/sentiment.js";
 
-const fixture = (name: string) =>
-  path.join(import.meta.dirname, "fixtures", name);
+const fixture = (name: string) => path.join(import.meta.dirname, "fixtures", name);
 
 describe("analyzeSessionSentiment", () => {
   it("scores a happy session positively", async () => {
-    const result = await analyzeSessionSentiment(
-      fixture("happy-session.jsonl"),
-      "happy-001",
-    );
+    const result = await analyzeSessionSentiment(fixture("happy-session.jsonl"), "happy-001");
     expect(result.averageScore).toBeGreaterThanOrEqual(0);
     expect(result.frustrationMessages.length).toBe(0);
     expect(result.interruptCount).toBe(0);
@@ -34,9 +27,7 @@ describe("analyzeSessionSentiment", () => {
       fixture("frustrated-session.jsonl"),
       "frustrated-001",
     );
-    const allNegativeWords = result.messageScores.flatMap(
-      (messageScore) => messageScore.negative,
-    );
+    const allNegativeWords = result.messageScores.flatMap((messageScore) => messageScore.negative);
     expect(allNegativeWords).toContain("wrong");
     expect(allNegativeWords).toContain("shit");
   });
@@ -50,24 +41,16 @@ describe("analyzeSessionSentiment", () => {
   });
 
   it("returns empty frustration for meta-only session", async () => {
-    const result = await analyzeSessionSentiment(
-      fixture("meta-only-session.jsonl"),
-      "meta-001",
-    );
+    const result = await analyzeSessionSentiment(fixture("meta-only-session.jsonl"), "meta-001");
     expect(result.frustrationMessages.length).toBe(0);
   });
 });
 
 describe("sentimentToSignals", () => {
   it("produces no signals for a happy session", async () => {
-    const sentiment = await analyzeSessionSentiment(
-      fixture("happy-session.jsonl"),
-      "happy-001",
-    );
+    const sentiment = await analyzeSessionSentiment(fixture("happy-session.jsonl"), "happy-001");
     const signals = sentimentToSignals(sentiment);
-    const sentimentSignals = signals.filter(
-      (signal) => signal.signalName === "negative-sentiment",
-    );
+    const sentimentSignals = signals.filter((signal) => signal.signalName === "negative-sentiment");
     expect(sentimentSignals.length).toBe(0);
   });
 
@@ -77,9 +60,7 @@ describe("sentimentToSignals", () => {
       "frustrated-001",
     );
     const signals = sentimentToSignals(sentiment);
-    const sentimentSignals = signals.filter(
-      (signal) => signal.signalName === "negative-sentiment",
-    );
+    const sentimentSignals = signals.filter((signal) => signal.signalName === "negative-sentiment");
     expect(sentimentSignals.length).toBe(1);
     expect(sentimentSignals[0].severity).toMatch(/critical|high|medium/);
   });
@@ -90,9 +71,7 @@ describe("sentimentToSignals", () => {
       "frustrated-001",
     );
     const signals = sentimentToSignals(sentiment);
-    const interruptSignals = signals.filter(
-      (signal) => signal.signalName === "user-interrupts",
-    );
+    const interruptSignals = signals.filter((signal) => signal.signalName === "user-interrupts");
     expect(interruptSignals.length).toBe(1);
   });
 
@@ -102,9 +81,7 @@ describe("sentimentToSignals", () => {
       "frustrated-001",
     );
     const signals = sentimentToSignals(sentiment);
-    const extremeSignals = signals.filter(
-      (signal) => signal.signalName === "extreme-frustration",
-    );
+    const extremeSignals = signals.filter((signal) => signal.signalName === "extreme-frustration");
     expect(extremeSignals.length).toBe(1);
     expect(extremeSignals[0].severity).toBe("critical");
   });

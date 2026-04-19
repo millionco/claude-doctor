@@ -1,10 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { DROID_SESSIONS_DIR } from "./constants.js";
-import {
-  ensureNormalizedSession,
-  readDroidSessionHeader,
-} from "./normalize.js";
+import { ensureNormalizedSession, readDroidSessionHeader } from "./normalize.js";
 import { buildSessionMetadata } from "../../indexer.js";
 
 interface DroidSessionEntry {
@@ -26,11 +23,7 @@ const walkSessions = (dir: string, results: string[]): void => {
       continue;
     }
 
-    if (
-      entry.isFile() &&
-      entry.name.endsWith(".jsonl") &&
-      !entry.name.endsWith(".settings.json")
-    ) {
+    if (entry.isFile() && entry.name.endsWith(".jsonl") && !entry.name.endsWith(".settings.json")) {
       results.push(fullPath);
     }
   }
@@ -60,9 +53,7 @@ const sanitizeProjectName = (cwd: string): string => {
   return cwd.replace(/^\//, "").replace(/\//g, "-");
 };
 
-export const indexDroidProjects = async (
-  projectFilter?: string,
-): Promise<ProjectMetadata[]> => {
+export const indexDroidProjects = async (projectFilter?: string): Promise<ProjectMetadata[]> => {
   const sessions = await discoverDroidSessions();
   const grouped = new Map<string, DroidSessionEntry[]>();
 
@@ -86,11 +77,7 @@ export const indexDroidProjects = async (
           cwd: session.cwd,
           timestamp: session.timestamp,
         });
-        const metadata = await buildSessionMetadata(
-          cachedPath,
-          cwd,
-          sanitizeProjectName(cwd),
-        );
+        const metadata = await buildSessionMetadata(cachedPath, cwd, sanitizeProjectName(cwd));
         projectSessions.push(metadata);
       } catch {
         /* skip unreadable session */
@@ -99,9 +86,7 @@ export const indexDroidProjects = async (
 
     if (projectSessions.length === 0) continue;
 
-    projectSessions.sort(
-      (left, right) => left.startTime.getTime() - right.startTime.getTime(),
-    );
+    projectSessions.sort((left, right) => left.startTime.getTime() - right.startTime.getTime());
 
     projects.push({
       projectPath: cwd,
@@ -118,9 +103,7 @@ export const indexDroidProjects = async (
 export const findDroidSession = async (
   sessionArg: string,
   projectFilter?: string,
-): Promise<
-  { sessionPath: string; sessionId: string; cwd: string } | undefined
-> => {
+): Promise<{ sessionPath: string; sessionId: string; cwd: string } | undefined> => {
   if (sessionArg.includes("/") || sessionArg.endsWith(".jsonl")) {
     const header = await readDroidSessionHeader(sessionArg);
     if (!header) return undefined;
@@ -146,9 +129,7 @@ export const findDroidSession = async (
 
 export const findLatestDroidSession = async (
   projectFilter?: string,
-): Promise<
-  { sessionPath: string; sessionId: string; cwd: string } | undefined
-> => {
+): Promise<{ sessionPath: string; sessionId: string; cwd: string } | undefined> => {
   const sessions = await discoverDroidSessions();
   const filtered = projectFilter
     ? sessions.filter((session) => session.cwd.includes(projectFilter))
@@ -157,8 +138,7 @@ export const findLatestDroidSession = async (
   if (filtered.length === 0) return undefined;
 
   const latest = filtered.reduce((latestSession, currentSession) =>
-    new Date(currentSession.timestamp).getTime() >
-    new Date(latestSession.timestamp).getTime()
+    new Date(currentSession.timestamp).getTime() > new Date(latestSession.timestamp).getTime()
       ? currentSession
       : latestSession,
   );

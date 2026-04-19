@@ -54,9 +54,7 @@ const sanitizeProjectName = (cwd: string): string => {
   return cwd.replace(/^\//, "").replace(/\//g, "-");
 };
 
-export const indexPiProjects = async (
-  projectFilter?: string,
-): Promise<ProjectMetadata[]> => {
+export const indexPiProjects = async (projectFilter?: string): Promise<ProjectMetadata[]> => {
   const sessions = await discoverPiSessions();
   const grouped = new Map<string, PiSessionEntry[]>();
 
@@ -80,20 +78,14 @@ export const indexPiProjects = async (
           cwd: session.cwd,
           timestamp: session.timestamp,
         });
-        const metadata = await buildSessionMetadata(
-          cachedPath,
-          cwd,
-          sanitizeProjectName(cwd),
-        );
+        const metadata = await buildSessionMetadata(cachedPath, cwd, sanitizeProjectName(cwd));
         projectSessions.push(metadata);
       } catch {}
     }
 
     if (projectSessions.length === 0) continue;
 
-    projectSessions.sort(
-      (left, right) => left.startTime.getTime() - right.startTime.getTime(),
-    );
+    projectSessions.sort((left, right) => left.startTime.getTime() - right.startTime.getTime());
 
     projects.push({
       projectPath: cwd,
@@ -145,8 +137,7 @@ export const findLatestPiSession = async (
   if (filtered.length === 0) return undefined;
 
   const latest = filtered.reduce((latestSession, currentSession) =>
-    new Date(currentSession.timestamp).getTime() >
-    new Date(latestSession.timestamp).getTime()
+    new Date(currentSession.timestamp).getTime() > new Date(latestSession.timestamp).getTime()
       ? currentSession
       : latestSession,
   );

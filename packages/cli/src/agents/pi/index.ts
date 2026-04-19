@@ -1,20 +1,9 @@
 import { TOP_SIGNALS_LIMIT } from "../../constants.js";
-import {
-  analyzeProject,
-  formatReportJson,
-} from "../../reporter.js";
+import { analyzeProject, formatReportJson } from "../../reporter.js";
 import { loadModel, saveModel, checkSession } from "../../model.js";
 import { generateAgentsRules, generateSuggestions } from "../../suggestions.js";
-import {
-  buildSessionTimeline,
-  renderAnalyzeOutput,
-  renderCheckOutput,
-} from "../../viz.js";
-import {
-  findLatestPiSession,
-  findPiSession,
-  indexPiProjects,
-} from "./indexer.js";
+import { buildSessionTimeline, renderAnalyzeOutput, renderCheckOutput } from "../../viz.js";
+import { findLatestPiSession, findPiSession, indexPiProjects } from "./indexer.js";
 import { ensureNormalizedSession, readPiSessionHeader } from "./normalize.js";
 
 interface PiRunOptions {
@@ -28,13 +17,8 @@ interface PiRunOptions {
 
 const AGENT_NAME = "pi";
 
-export const runPiCheck = async (
-  sessionArg: string,
-  options: PiRunOptions,
-): Promise<string> => {
-  let resolved:
-    | { sessionPath: string; sessionId: string; cwd: string }
-    | undefined;
+export const runPiCheck = async (sessionArg: string, options: PiRunOptions): Promise<string> => {
+  let resolved: { sessionPath: string; sessionId: string; cwd: string } | undefined;
 
   if (sessionArg === "latest") {
     resolved = await findLatestPiSession(options.project);
@@ -53,19 +37,13 @@ export const runPiCheck = async (
 
   const cachedPath = await ensureNormalizedSession(resolved.sessionPath, header);
   const savedModel = loadModel(options.dir, AGENT_NAME);
-  const result = await checkSession(
-    cachedPath,
-    resolved.sessionId,
-    savedModel,
-    AGENT_NAME,
-  );
+  const result = await checkSession(cachedPath, resolved.sessionId, savedModel, AGENT_NAME);
 
   if (options.json) {
     return JSON.stringify(result, null, 2);
   }
 
-  const { turns, healthPercentage, summary } =
-    await buildSessionTimeline(cachedPath);
+  const { turns, healthPercentage, summary } = await buildSessionTimeline(cachedPath);
 
   return renderCheckOutput(
     result.sessionId,
@@ -90,20 +68,14 @@ export const runPiReport = async (
 
   for (let projectIndex = 0; projectIndex < projects.length; projectIndex++) {
     const project = projects[projectIndex];
-    options.onProgress?.(
-      projectIndex + 1,
-      projects.length,
-      project.projectPath,
-    );
+    options.onProgress?.(projectIndex + 1, projects.length, project.projectPath);
     const analysis = await analyzeProject(project);
     projectAnalyses.push(analysis);
   }
 
   projectAnalyses.sort((left, right) => left.overallScore - right.overallScore);
 
-  const allSignals = projectAnalyses.flatMap(
-    (projectAnalysis) => projectAnalysis.signals,
-  );
+  const allSignals = projectAnalyses.flatMap((projectAnalysis) => projectAnalysis.signals);
   const topSignals = allSignals
     .sort((left, right) => left.score - right.score)
     .slice(0, TOP_SIGNALS_LIMIT);
@@ -112,10 +84,7 @@ export const runPiReport = async (
 
   const report: AnalysisReport = {
     generatedAt: new Date(),
-    totalSessions: projects.reduce(
-      (sum, project) => sum + project.totalSessions,
-      0,
-    ),
+    totalSessions: projects.reduce((sum, project) => sum + project.totalSessions, 0),
     totalProjects: projects.length,
     projects: projectAnalyses,
     topSignals,

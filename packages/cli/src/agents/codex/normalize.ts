@@ -42,9 +42,7 @@ const inferToolFailureFromText = (outputText: string): boolean => {
   return CODEX_TOOL_ERROR_PATTERNS.some((pattern) => pattern.test(outputText));
 };
 
-const extractStructuredToolOutput = (
-  payload: Record<string, unknown>,
-): string => {
+const extractStructuredToolOutput = (payload: Record<string, unknown>): string => {
   const candidateFields = [
     payload.aggregated_output,
     payload.stderr,
@@ -70,19 +68,12 @@ const inferStructuredToolFailure = (
   return inferToolFailureFromText(outputText);
 };
 
-const choosePreferredToolOutput = (
-  existingOutputText: string,
-  nextOutputText: string,
-): string => {
+const choosePreferredToolOutput = (existingOutputText: string, nextOutputText: string): string => {
   if (!nextOutputText.trim()) return existingOutputText;
   if (!existingOutputText.trim()) return nextOutputText;
 
-  const nextIncludesExitCode = nextOutputText.includes(
-    "Process exited with code",
-  );
-  const existingIncludesExitCode = existingOutputText.includes(
-    "Process exited with code",
-  );
+  const nextIncludesExitCode = nextOutputText.includes("Process exited with code");
+  const existingIncludesExitCode = existingOutputText.includes("Process exited with code");
 
   if (nextIncludesExitCode && !existingIncludesExitCode) {
     return nextOutputText;
@@ -146,14 +137,9 @@ export const readCodexSessionHeader = async (
       const parsed = parseCodexLine(line);
       if (!parsed) return undefined;
 
-      if (
-        parsed.type === "session_meta" &&
-        parsed.payload &&
-        typeof parsed.payload === "object"
-      ) {
+      if (parsed.type === "session_meta" && parsed.payload && typeof parsed.payload === "object") {
         const payload = parsed.payload as Record<string, unknown>;
-        const sessionId =
-          typeof payload.id === "string" ? payload.id : undefined;
+        const sessionId = typeof payload.id === "string" ? payload.id : undefined;
         const cwd = typeof payload.cwd === "string" ? payload.cwd : undefined;
         const timestamp =
           typeof payload.timestamp === "string"
@@ -167,10 +153,7 @@ export const readCodexSessionHeader = async (
         return undefined;
       }
 
-      if (
-        typeof parsed.id === "string" &&
-        typeof parsed.timestamp === "string"
-      ) {
+      if (typeof parsed.id === "string" && typeof parsed.timestamp === "string") {
         return {
           sessionId: parsed.id,
           cwd: "",
@@ -198,11 +181,7 @@ interface NormalizerState {
   toolResultsByCallId: Record<string, TrackedToolResult>;
 }
 
-const pushUserText = (
-  state: NormalizerState,
-  timestamp: string,
-  text: string,
-): void => {
+const pushUserText = (state: NormalizerState, timestamp: string, text: string): void => {
   if (!text.trim()) return;
   state.events.push({
     type: "user",
@@ -215,11 +194,7 @@ const pushUserText = (
   });
 };
 
-const pushAssistantText = (
-  state: NormalizerState,
-  timestamp: string,
-  text: string,
-): void => {
+const pushAssistantText = (state: NormalizerState, timestamp: string, text: string): void => {
   if (!text.trim()) return;
   if (state.lastAgentMessage === text) return;
   state.lastAgentMessage = text;
@@ -292,7 +267,6 @@ const updateToolResult = (
   timestamp: string,
   outputText: string,
   isError: boolean,
-  shouldReplaceErrorState: boolean,
 ): void => {
   const event = state.events[trackedToolResult.eventIndex];
   if (!event || typeof event !== "object") return;
@@ -302,9 +276,7 @@ const updateToolResult = (
   if (!message || typeof message !== "object") return;
 
   const messageRecord = message as Record<string, unknown>;
-  const content = Array.isArray(messageRecord.content)
-    ? messageRecord.content
-    : undefined;
+  const content = Array.isArray(messageRecord.content) ? messageRecord.content : undefined;
   if (!content || content.length === 0) return;
 
   const toolResultBlock = content[0];
@@ -312,22 +284,14 @@ const updateToolResult = (
 
   const toolResultRecord = toolResultBlock as Record<string, unknown>;
   const existingOutputText =
-    typeof toolResultRecord.content === "string"
-      ? toolResultRecord.content
-      : "";
-  toolResultRecord.content = choosePreferredToolOutput(
-    existingOutputText,
-    outputText,
-  );
+    typeof toolResultRecord.content === "string" ? toolResultRecord.content : "";
+  toolResultRecord.content = choosePreferredToolOutput(existingOutputText, outputText);
 
-  if (shouldReplaceErrorState || isError) {
-    toolResultRecord.is_error = isError;
+  if (isError) {
+    toolResultRecord.is_error = true;
   }
 
-  if (
-    typeof eventRecord.timestamp !== "string" ||
-    eventRecord.timestamp > timestamp
-  ) {
+  if (typeof eventRecord.timestamp !== "string" || eventRecord.timestamp > timestamp) {
     eventRecord.timestamp = timestamp;
   }
 };
@@ -373,23 +337,16 @@ const handleResponseItem = (
   if (payloadType === "function_call" || payloadType === "custom_tool_call") {
     const rawName = payload.name;
     const toolName = typeof rawName === "string" ? rawName : "unknown_tool";
-    const argsField =
-      payloadType === "function_call" ? payload.arguments : payload.input;
+    const argsField = payloadType === "function_call" ? payload.arguments : payload.input;
     const toolInput = parseToolArguments(argsField);
     const callId =
-      typeof payload.call_id === "string"
-        ? payload.call_id
-        : `call_${state.events.length}`;
+      typeof payload.call_id === "string" ? payload.call_id : `call_${state.events.length}`;
     pushAssistantToolUse(state, timestamp, toolName, toolInput, callId);
     return;
   }
 
-  if (
-    payloadType === "function_call_output" ||
-    payloadType === "custom_tool_call_output"
-  ) {
-    const explicitCallId =
-      typeof payload.call_id === "string" ? payload.call_id : undefined;
+  if (payloadType === "function_call_output" || payloadType === "custom_tool_call_output") {
+    const explicitCallId = typeof payload.call_id === "string" ? payload.call_id : undefined;
     const callId = explicitCallId ?? `call_${state.events.length}`;
     const outputText = flattenOutput(payload.output);
     const isError = inferToolFailureFromText(outputText);
@@ -398,24 +355,11 @@ const handleResponseItem = (
       : undefined;
 
     if (trackedToolResult) {
-      updateToolResult(
-        state,
-        trackedToolResult,
-        timestamp,
-        outputText,
-        isError,
-        false,
-      );
+      updateToolResult(state, trackedToolResult, timestamp, outputText, isError);
       return;
     }
 
-    const eventIndex = pushToolResult(
-      state,
-      timestamp,
-      callId,
-      outputText,
-      isError,
-    );
+    const eventIndex = pushToolResult(state, timestamp, callId, outputText, isError);
 
     if (explicitCallId) {
       state.toolResultsByCallId[explicitCallId] = { eventIndex };
@@ -432,8 +376,7 @@ const handleEventMsg = (
   const payloadType = payload.type;
 
   if (payloadType === "exec_command_end") {
-    const explicitCallId =
-      typeof payload.call_id === "string" ? payload.call_id : undefined;
+    const explicitCallId = typeof payload.call_id === "string" ? payload.call_id : undefined;
     const callId = explicitCallId ?? `call_${state.events.length}`;
     const outputText = extractStructuredToolOutput(payload);
     const isError = inferStructuredToolFailure(payload, outputText);
@@ -442,25 +385,12 @@ const handleEventMsg = (
       : undefined;
 
     if (trackedToolResult) {
-      updateToolResult(
-        state,
-        trackedToolResult,
-        timestamp,
-        outputText,
-        isError,
-        true,
-      );
+      updateToolResult(state, trackedToolResult, timestamp, outputText, isError);
       return;
     }
 
     if (outputText.trim() || isError) {
-      const eventIndex = pushToolResult(
-        state,
-        timestamp,
-        callId,
-        outputText,
-        isError,
-      );
+      const eventIndex = pushToolResult(state, timestamp, callId, outputText, isError);
 
       if (explicitCallId) {
         state.toolResultsByCallId[explicitCallId] = { eventIndex };
@@ -520,10 +450,7 @@ export const normalizeCodexRollout = async (
     if (!parsed) continue;
 
     const topType = parsed.type;
-    const timestamp =
-      typeof parsed.timestamp === "string"
-        ? parsed.timestamp
-        : header.timestamp;
+    const timestamp = typeof parsed.timestamp === "string" ? parsed.timestamp : header.timestamp;
 
     if (topType === "session_meta" || topType === "turn_context") continue;
     if (
@@ -537,11 +464,7 @@ export const normalizeCodexRollout = async (
     if (topType === "response_item") {
       const payload = parsed.payload;
       if (payload && typeof payload === "object") {
-        handleResponseItem(
-          state,
-          timestamp,
-          payload as Record<string, unknown>,
-        );
+        handleResponseItem(state, timestamp, payload as Record<string, unknown>);
       }
       continue;
     }
@@ -561,10 +484,7 @@ export const normalizeCodexRollout = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(
-    CODEX_CACHE_DIR,
-    `${sessionId}.v${CODEX_NORMALIZED_SESSION_VERSION}.jsonl`,
-  );
+  path.join(CODEX_CACHE_DIR, `${sessionId}.v${CODEX_NORMALIZED_SESSION_VERSION}.jsonl`);
 
 export const ensureNormalizedSession = async (
   rolloutPath: string,

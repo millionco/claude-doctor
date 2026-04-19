@@ -2,8 +2,7 @@ import * as path from "node:path";
 import { describe, it, expect } from "vite-plus/test";
 import { detectToolInefficiency } from "../src/signals/tool-efficiency.js";
 
-const fixture = (name: string) =>
-  path.join(import.meta.dirname, "fixtures", name);
+const fixture = (name: string) => path.join(import.meta.dirname, "fixtures", name);
 
 describe("detectToolInefficiency", () => {
   it("detects excessive read-to-edit ratio", async () => {
@@ -19,10 +18,7 @@ describe("detectToolInefficiency", () => {
   });
 
   it("returns no signals for a balanced session", async () => {
-    const signals = await detectToolInefficiency(
-      fixture("happy-session.jsonl"),
-      "happy-001",
-    );
+    const signals = await detectToolInefficiency(fixture("happy-session.jsonl"), "happy-001");
     expect(signals.length).toBe(0);
   });
 

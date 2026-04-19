@@ -48,8 +48,7 @@ const getContentBlocks = (content: unknown): Record<string, unknown>[] => {
 };
 
 const isTextOnlyMessage = (contentBlocks: Record<string, unknown>[]): boolean =>
-  contentBlocks.length > 0 &&
-  contentBlocks.every((contentBlock) => contentBlock.type === "text");
+  contentBlocks.length > 0 && contentBlocks.every((contentBlock) => contentBlock.type === "text");
 
 const extractUserText = (contentBlocks: Record<string, unknown>[]): string => {
   const textParts: string[] = [];
@@ -66,9 +65,7 @@ const extractUserText = (contentBlocks: Record<string, unknown>[]): string => {
 };
 
 const normalizeInterruptText = (text: string): string =>
-  DROID_INTERRUPT_MESSAGES.includes(text)
-    ? "[Request interrupted by user]"
-    : text;
+  DROID_INTERRUPT_MESSAGES.includes(text) ? "[Request interrupted by user]" : text;
 
 const pushEvent = (
   state: DroidNormalizerState,
@@ -151,10 +148,7 @@ export const normalizeDroidSession = async (
       const message = parsed.message as Record<string, unknown>;
       if (message.visibility === "user_only") continue;
 
-      const timestamp =
-        typeof parsed.timestamp === "string"
-          ? parsed.timestamp
-          : header.timestamp;
+      const timestamp = typeof parsed.timestamp === "string" ? parsed.timestamp : header.timestamp;
 
       if (message.role === "user") {
         if (typeof message.content === "string") {
@@ -200,10 +194,7 @@ export const normalizeDroidSession = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(
-    DROID_CACHE_DIR,
-    `${sessionId}.v${DROID_NORMALIZED_SESSION_VERSION}.jsonl`,
-  );
+  path.join(DROID_CACHE_DIR, `${sessionId}.v${DROID_NORMALIZED_SESSION_VERSION}.jsonl`);
 
 export const ensureNormalizedSession = async (
   sessionPath: string,

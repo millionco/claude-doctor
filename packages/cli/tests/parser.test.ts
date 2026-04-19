@@ -9,8 +9,7 @@ import {
   getSessionTimeRange,
 } from "../src/parser.js";
 
-const fixture = (name: string) =>
-  path.join(import.meta.dirname, "fixtures", name);
+const fixture = (name: string) => path.join(import.meta.dirname, "fixtures", name);
 
 describe("parseTranscriptFile", () => {
   it("parses all events from a JSONL file", async () => {
@@ -54,15 +53,9 @@ describe("extractUserMessages", () => {
   it("excludes meta messages", async () => {
     const events = await parseTranscriptFile(fixture("meta-only-session.jsonl"));
     const messages = extractUserMessages(events);
-    expect(messages).not.toContain(
-      expect.stringContaining("local-command-caveat"),
-    );
-    expect(messages).not.toContain(
-      expect.stringContaining("command-name"),
-    );
-    expect(messages).not.toContain(
-      expect.stringContaining("local-command-stdout"),
-    );
+    expect(messages).not.toContain(expect.stringContaining("local-command-caveat"));
+    expect(messages).not.toContain(expect.stringContaining("command-name"));
+    expect(messages).not.toContain(expect.stringContaining("local-command-stdout"));
   });
 
   it("excludes task-notification messages", async () => {
@@ -96,9 +89,7 @@ describe("extractUserMessages", () => {
   });
 
   it("extracts frustrated messages including profanity", async () => {
-    const events = await parseTranscriptFile(
-      fixture("frustrated-session.jsonl"),
-    );
+    const events = await parseTranscriptFile(fixture("frustrated-session.jsonl"));
     const messages = extractUserMessages(events);
     expect(messages).toContain("fix the broken login page");
     expect(messages).toContain("no that's wrong, revert that change");
@@ -122,9 +113,7 @@ describe("extractToolUses", () => {
   });
 
   it("counts many tool uses in thrashing session", async () => {
-    const events = await parseTranscriptFile(
-      fixture("thrashing-session.jsonl"),
-    );
+    const events = await parseTranscriptFile(fixture("thrashing-session.jsonl"));
     const toolUses = extractToolUses(events);
     expect(toolUses.length).toBe(7);
   });
@@ -137,17 +126,13 @@ describe("extractToolErrors", () => {
   });
 
   it("counts is_error tool results", async () => {
-    const events = await parseTranscriptFile(
-      fixture("error-loop-session.jsonl"),
-    );
+    const events = await parseTranscriptFile(fixture("error-loop-session.jsonl"));
     const errorCount = extractToolErrors(events);
     expect(errorCount).toBeGreaterThanOrEqual(4);
   });
 
   it("counts tool_use_error markers", async () => {
-    const events = await parseTranscriptFile(
-      fixture("error-loop-session.jsonl"),
-    );
+    const events = await parseTranscriptFile(fixture("error-loop-session.jsonl"));
     const errorCount = extractToolErrors(events);
     expect(errorCount).toBe(7);
   });
@@ -160,9 +145,7 @@ describe("countInterrupts", () => {
   });
 
   it("detects user interrupts", async () => {
-    const events = await parseTranscriptFile(
-      fixture("frustrated-session.jsonl"),
-    );
+    const events = await parseTranscriptFile(fixture("frustrated-session.jsonl"));
     expect(countInterrupts(events)).toBe(1);
   });
 });

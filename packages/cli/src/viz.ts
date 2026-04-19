@@ -33,9 +33,7 @@ for (const [phrase, score] of Object.entries(SENTINEL_CUSTOM_TOKENS)) {
 const isMetaContent = (content: string): boolean =>
   META_MESSAGE_PATTERNS.some((pattern) => pattern.test(content));
 
-export const buildSessionTimeline = async (
-  filePath: string,
-): Promise<SessionTimeline> => {
+export const buildSessionTimeline = async (filePath: string): Promise<SessionTimeline> => {
   const events = await parseTranscriptFile(filePath);
   const turns: TurnHealth[] = [];
   let turnIndex = 0;
@@ -86,12 +84,8 @@ export const buildSessionTimeline = async (
       if (isMetaContent(content)) continue;
       if (content.length > MAX_USER_MESSAGE_LENGTH) continue;
 
-      const isCorrection = CORRECTION_PATTERNS.some((pattern) =>
-        pattern.test(content),
-      );
-      const isKeepGoing = KEEP_GOING_PATTERNS.some((pattern) =>
-        pattern.test(content.trim()),
-      );
+      const isCorrection = CORRECTION_PATTERNS.some((pattern) => pattern.test(content));
+      const isKeepGoing = KEEP_GOING_PATTERNS.some((pattern) => pattern.test(content.trim()));
       const sentimentResult = analyzer.analyze(content, {
         extras: CUSTOM_SCORING,
       });
@@ -104,10 +98,7 @@ export const buildSessionTimeline = async (
         reason = isCorrection
           ? "correction"
           : `negative (${sentimentResult.comparative.toFixed(1)})`;
-      } else if (
-        isKeepGoing ||
-        sentimentResult.comparative < VIZ_SENTIMENT_YELLOW_THRESHOLD
-      ) {
+      } else if (isKeepGoing || sentimentResult.comparative < VIZ_SENTIMENT_YELLOW_THRESHOLD) {
         health = "yellow";
         reason = isKeepGoing ? "keep going" : "mildly negative";
       }
@@ -133,13 +124,9 @@ export const buildSessionTimeline = async (
   const scorableTurns = turns.filter(
     (turn) => turn.type === "user" || turn.type === "tool-error" || turn.type === "interrupt",
   );
-  const greenCount = scorableTurns.filter(
-    (turn) => turn.health === "green",
-  ).length;
+  const greenCount = scorableTurns.filter((turn) => turn.health === "green").length;
   const healthPercentage =
-    scorableTurns.length > 0
-      ? Math.round((greenCount / scorableTurns.length) * 100)
-      : 100;
+    scorableTurns.length > 0 ? Math.round((greenCount / scorableTurns.length) * 100) : 100;
 
   let summary: string;
   if (healthPercentage >= HEALTH_GOOD_THRESHOLD) {
@@ -175,9 +162,7 @@ export const renderTimeline = (
 ): string => {
   if (turns.length === 0) return `${DIM}(no turns)${RESET}`;
 
-  const userTurns = turns.filter(
-    (turn) => turn.type !== "assistant",
-  );
+  const userTurns = turns.filter((turn) => turn.type !== "assistant");
 
   if (userTurns.length === 0) return `${DIM}(no user turns)${RESET}`;
 
@@ -188,11 +173,7 @@ export const renderTimeline = (
   const bucketSize = userTurns.length / maxWidth;
   const blocks: string[] = [];
 
-  for (
-    let bucketIndex = 0;
-    bucketIndex < maxWidth;
-    bucketIndex++
-  ) {
+  for (let bucketIndex = 0; bucketIndex < maxWidth; bucketIndex++) {
     const bucketStart = Math.floor(bucketIndex * bucketSize);
     const bucketEnd = Math.floor((bucketIndex + 1) * bucketSize);
     const bucket = userTurns.slice(bucketStart, bucketEnd);
@@ -243,10 +224,16 @@ export const renderCheckOutput = (
   const lines: string[] = [];
 
   const statusColor =
-    healthPercentage >= HEALTH_GOOD_THRESHOLD ? GREEN : healthPercentage >= HEALTH_FAIR_THRESHOLD ? YELLOW : RED;
+    healthPercentage >= HEALTH_GOOD_THRESHOLD
+      ? GREEN
+      : healthPercentage >= HEALTH_FAIR_THRESHOLD
+        ? YELLOW
+        : RED;
 
   lines.push(`${BOLD}Session${RESET}  ${sessionId.slice(0, 8)}`);
-  lines.push(`${BOLD}Health${RESET}   ${renderHealthBar(healthPercentage)}  ${statusColor}${summary}${RESET}`);
+  lines.push(
+    `${BOLD}Health${RESET}   ${renderHealthBar(healthPercentage)}  ${statusColor}${summary}${RESET}`,
+  );
   lines.push("");
 
   lines.push(`${BOLD}Timeline${RESET}`);
@@ -266,11 +253,7 @@ export const renderCheckOutput = (
     lines.push(`${BOLD}Signals${RESET} (${activeSignals.length})`);
     for (const signal of activeSignals) {
       const severityColor =
-        signal.severity === "critical"
-          ? RED
-          : signal.severity === "high"
-            ? YELLOW
-            : DIM;
+        signal.severity === "critical" ? RED : signal.severity === "high" ? YELLOW : DIM;
       const badge =
         signal.severity === "critical"
           ? "CRIT"
@@ -286,20 +269,17 @@ export const renderCheckOutput = (
     lines.push("");
   }
 
-  const redTurns = turns.filter(
-    (turn) => turn.health === "red" && turn.snippet,
-  );
+  const redTurns = turns.filter((turn) => turn.health === "red" && turn.snippet);
   if (redTurns.length > 0) {
     lines.push(`${BOLD}Problem turns${RESET}`);
     for (const turn of redTurns.slice(0, PROBLEM_TURNS_DISPLAY_LIMIT)) {
-      const label = turn.type === "tool-error"
-        ? "tool-err"
-        : turn.type === "interrupt"
-          ? "interrupt"
-          : turn.reason ?? "negative";
-      lines.push(
-        `  ${RED}#${turn.index}${RESET} ${DIM}[${label}]${RESET} ${turn.snippet ?? ""}`,
-      );
+      const label =
+        turn.type === "tool-error"
+          ? "tool-err"
+          : turn.type === "interrupt"
+            ? "interrupt"
+            : (turn.reason ?? "negative");
+      lines.push(`  ${RED}#${turn.index}${RESET} ${DIM}[${label}]${RESET} ${turn.snippet ?? ""}`);
     }
     lines.push("");
   }
@@ -328,27 +308,21 @@ const truncateProjectName = (name: string): string => {
 const scoreToHealthPercentage = (project: ProjectAnalysis): number => {
   if (project.signals.length === 0) return 100;
 
-  const criticalCount = project.signals.filter(
-    (signal) => signal.severity === "critical",
-  ).length;
-  const highCount = project.signals.filter(
-    (signal) => signal.severity === "high",
-  ).length;
-  const mediumCount = project.signals.filter(
-    (signal) => signal.severity === "medium",
-  ).length;
+  const criticalCount = project.signals.filter((signal) => signal.severity === "critical").length;
+  const highCount = project.signals.filter((signal) => signal.severity === "high").length;
+  const mediumCount = project.signals.filter((signal) => signal.severity === "medium").length;
 
   const rawPenalty = criticalCount * 5 + highCount * 3 + mediumCount * 1;
   const scaledPenalty = rawPenalty / Math.max(1, project.sessionCount);
   return Math.max(5, Math.min(100, Math.round(100 - scaledPenalty * 8)));
 };
 
-export const renderAnalyzeOutput = async (
-  report: AnalysisReport,
-): Promise<string> => {
+export const renderAnalyzeOutput = async (report: AnalysisReport): Promise<string> => {
   const lines: string[] = [];
 
-  lines.push(`${BOLD}Claude Optimizer${RESET}  ${DIM}${report.totalProjects} projects · ${report.totalSessions} sessions${RESET}`);
+  lines.push(
+    `${BOLD}Claude Optimizer${RESET}  ${DIM}${report.totalProjects} projects · ${report.totalSessions} sessions${RESET}`,
+  );
   lines.push("");
 
   const projectsToShow = report.projects.slice(0, REPORT_PROJECT_LIMIT);
@@ -359,8 +333,10 @@ export const renderAnalyzeOutput = async (
     const percentLabel = `${healthPercentage}%`.padStart(BAR_LABEL_WIDTH);
 
     const barColor =
-      healthPercentage >= HEALTH_GOOD_THRESHOLD ? GREEN
-        : healthPercentage >= HEALTH_FAIR_THRESHOLD ? YELLOW
+      healthPercentage >= HEALTH_GOOD_THRESHOLD
+        ? GREEN
+        : healthPercentage >= HEALTH_FAIR_THRESHOLD
+          ? YELLOW
           : RED;
 
     const barWidth = 25;
@@ -381,16 +357,22 @@ export const renderAnalyzeOutput = async (
         .slice(0, 4)
         .map(([name, count]) => {
           const tagColor =
-            project.signals.find((signal) => signal.signalName === name)?.severity === "critical" ? RED
-              : project.signals.find((signal) => signal.signalName === name)?.severity === "high" ? YELLOW
+            project.signals.find((signal) => signal.signalName === name)?.severity === "critical"
+              ? RED
+              : project.signals.find((signal) => signal.signalName === name)?.severity === "high"
+                ? YELLOW
                 : DIM;
           return `${tagColor}${name}${RESET}${DIM}(${count})${RESET}`;
         })
         .join(`${DIM} · ${RESET}`);
 
-      lines.push(`  ${"".padEnd(PROJECT_NAME_WIDTH)} ${DIM}${project.sessionCount} sessions${RESET} ${DIM}·${RESET} ${tags}`);
+      lines.push(
+        `  ${"".padEnd(PROJECT_NAME_WIDTH)} ${DIM}${project.sessionCount} sessions${RESET} ${DIM}·${RESET} ${tags}`,
+      );
     } else {
-      lines.push(`  ${"".padEnd(PROJECT_NAME_WIDTH)} ${DIM}${project.sessionCount} sessions · no issues${RESET}`);
+      lines.push(
+        `  ${"".padEnd(PROJECT_NAME_WIDTH)} ${DIM}${project.sessionCount} sessions · no issues${RESET}`,
+      );
     }
 
     lines.push("");

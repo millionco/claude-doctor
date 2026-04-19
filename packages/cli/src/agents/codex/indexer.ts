@@ -1,10 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { CODEX_SESSIONS_DIR } from "./constants.js";
-import {
-  ensureNormalizedSession,
-  readCodexSessionHeader,
-} from "./normalize.js";
+import { ensureNormalizedSession, readCodexSessionHeader } from "./normalize.js";
 import { buildSessionMetadata } from "../../indexer.js";
 
 interface CodexRolloutEntry {
@@ -54,9 +51,7 @@ const sanitizeProjectName = (cwd: string): string => {
   return cwd.replace(/^\//, "").replace(/\//g, "-");
 };
 
-export const indexCodexProjects = async (
-  projectFilter?: string,
-): Promise<ProjectMetadata[]> => {
+export const indexCodexProjects = async (projectFilter?: string): Promise<ProjectMetadata[]> => {
   const rollouts = await discoverCodexRollouts();
   const grouped = new Map<string, CodexRolloutEntry[]>();
 
@@ -80,11 +75,7 @@ export const indexCodexProjects = async (
           cwd: rollout.cwd,
           timestamp: rollout.timestamp,
         });
-        const metadata = await buildSessionMetadata(
-          cachedPath,
-          cwd,
-          sanitizeProjectName(cwd),
-        );
+        const metadata = await buildSessionMetadata(cachedPath, cwd, sanitizeProjectName(cwd));
         sessions.push(metadata);
       } catch {
         /* skip unreadable rollout */
@@ -93,9 +84,7 @@ export const indexCodexProjects = async (
 
     if (sessions.length === 0) continue;
 
-    sessions.sort(
-      (left, right) => left.startTime.getTime() - right.startTime.getTime(),
-    );
+    sessions.sort((left, right) => left.startTime.getTime() - right.startTime.getTime());
 
     projects.push({
       projectPath: cwd,
@@ -112,9 +101,7 @@ export const indexCodexProjects = async (
 export const findCodexSession = async (
   sessionArg: string,
   projectFilter?: string,
-): Promise<
-  { rolloutPath: string; sessionId: string; cwd: string } | undefined
-> => {
+): Promise<{ rolloutPath: string; sessionId: string; cwd: string } | undefined> => {
   if (sessionArg.includes("/") || sessionArg.endsWith(".jsonl")) {
     const header = await readCodexSessionHeader(sessionArg);
     if (!header) return undefined;
@@ -138,9 +125,7 @@ export const findCodexSession = async (
 
 export const findLatestCodexSession = async (
   projectFilter?: string,
-): Promise<
-  { rolloutPath: string; sessionId: string; cwd: string } | undefined
-> => {
+): Promise<{ rolloutPath: string; sessionId: string; cwd: string } | undefined> => {
   const rollouts = await discoverCodexRollouts();
   const filtered = projectFilter
     ? rollouts.filter((rollout) => rollout.cwd.includes(projectFilter))

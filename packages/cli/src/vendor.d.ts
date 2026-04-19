@@ -15,10 +15,7 @@ declare module "sentiment" {
 
   class Sentiment {
     analyze(phrase: string, options?: SentimentOptions): SentimentResult;
-    registerLanguage(
-      language: string,
-      module: { labels: Record<string, number> },
-    ): void;
+    registerLanguage(language: string, module: { labels: Record<string, number> }): void;
   }
 
   export default Sentiment;

@@ -24,9 +24,8 @@ export const detectThrashing = async (
   const editCounts = new Map<string, FileEditCount>();
 
   for (const toolUse of toolUses) {
-    const isEditTool = EDIT_TOOL_NAMES.some(
-      (editToolName) =>
-        toolUse.name.toLowerCase().includes(editToolName.toLowerCase()),
+    const isEditTool = EDIT_TOOL_NAMES.some((editToolName) =>
+      toolUse.name.toLowerCase().includes(editToolName.toLowerCase()),
     );
     if (!isEditTool) continue;
 
@@ -50,9 +49,7 @@ export const detectThrashing = async (
 
   const signals: SignalResult[] = [];
   const thrashingFiles = [...editCounts.values()]
-    .filter(
-      (fileEditInfo) => fileEditInfo.editCount >= THRASHING_EDIT_THRESHOLD,
-    )
+    .filter((fileEditInfo) => fileEditInfo.editCount >= THRASHING_EDIT_THRESHOLD)
     .sort((left, right) => right.editCount - left.editCount);
 
   if (thrashingFiles.length > 0) {
@@ -75,10 +72,7 @@ export const detectThrashing = async (
       sessionId,
       examples: thrashingFiles
         .slice(0, 5)
-        .map(
-          (fileEditInfo) =>
-            `${fileEditInfo.filePath} (${fileEditInfo.editCount}x)`,
-        ),
+        .map((fileEditInfo) => `${fileEditInfo.filePath} (${fileEditInfo.editCount}x)`),
     });
   }
 

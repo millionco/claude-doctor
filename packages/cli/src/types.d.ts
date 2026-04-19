@@ -79,11 +79,7 @@ interface QueueOperationEvent extends BaseEvent {
   content?: string;
 }
 
-type TranscriptEvent =
-  | UserEvent
-  | AssistantEvent
-  | QueueOperationEvent
-  | BaseEvent;
+type TranscriptEvent = UserEvent | AssistantEvent | QueueOperationEvent | BaseEvent;
 
 interface SessionMetadata {
   sessionId: string;

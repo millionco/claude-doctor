@@ -41,8 +41,7 @@ const getContentBlocks = (content: unknown): Record<string, unknown>[] => {
 };
 
 const isTextOnlyMessage = (contentBlocks: Record<string, unknown>[]): boolean =>
-  contentBlocks.length > 0 &&
-  contentBlocks.every((contentBlock) => contentBlock.type === "text");
+  contentBlocks.length > 0 && contentBlocks.every((contentBlock) => contentBlock.type === "text");
 
 const extractTextContent = (contentBlocks: Record<string, unknown>[]): string => {
   const textParts: string[] = [];
@@ -79,10 +78,7 @@ const normalizeAssistantContent = (
       continue;
     }
 
-    if (
-      contentBlock.type === "thinking" &&
-      typeof contentBlock.thinking === "string"
-    ) {
+    if (contentBlock.type === "thinking" && typeof contentBlock.thinking === "string") {
       const thinking = contentBlock.thinking.trim();
       if (!thinking) continue;
       normalizedContent.push({ type: "thinking", thinking });
@@ -106,9 +102,7 @@ const normalizeAssistantContent = (
   return normalizedContent;
 };
 
-const normalizeToolResultContent = (
-  content: unknown,
-): string | Record<string, unknown>[] => {
+const normalizeToolResultContent = (content: unknown): string | Record<string, unknown>[] => {
   if (typeof content === "string") {
     return content.trim();
   }
@@ -185,9 +179,7 @@ export const readPiSessionHeader = async (
         sessionId: parsed.id,
         cwd: typeof parsed.cwd === "string" ? parsed.cwd : "",
         timestamp:
-          typeof parsed.timestamp === "string"
-            ? parsed.timestamp
-            : sessionStat.mtime.toISOString(),
+          typeof parsed.timestamp === "string" ? parsed.timestamp : sessionStat.mtime.toISOString(),
       };
     }
   } finally {
@@ -228,10 +220,7 @@ export const normalizePiSession = async (
       if (!parsed.message || typeof parsed.message !== "object") continue;
 
       const message = parsed.message as Record<string, unknown>;
-      const timestamp =
-        typeof parsed.timestamp === "string"
-          ? parsed.timestamp
-          : header.timestamp;
+      const timestamp = typeof parsed.timestamp === "string" ? parsed.timestamp : header.timestamp;
 
       if (message.role === "user") {
         if (typeof message.content === "string") {
@@ -275,8 +264,7 @@ export const normalizePiSession = async (
       if (message.role !== "toolResult") continue;
 
       const content = normalizeToolResultContent(message.content);
-      const hasContent =
-        typeof content === "string" ? Boolean(content) : content.length > 0;
+      const hasContent = typeof content === "string" ? Boolean(content) : content.length > 0;
       const isError = Boolean(message.isError);
       if (!hasContent && !isError) continue;
 
@@ -297,10 +285,7 @@ export const normalizePiSession = async (
 };
 
 export const getCachedNormalizedPath = (sessionId: string): string =>
-  path.join(
-    PI_CACHE_DIR,
-    `${sessionId}.v${PI_NORMALIZED_SESSION_VERSION}.jsonl`,
-  );
+  path.join(PI_CACHE_DIR, `${sessionId}.v${PI_NORMALIZED_SESSION_VERSION}.jsonl`);
 
 export const ensureNormalizedSession = async (
   sessionPath: string,

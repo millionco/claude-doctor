@@ -1,20 +1,9 @@
-import {
-  indexCodexProjects,
-  findLatestCodexSession,
-  findCodexSession,
-} from "./indexer.js";
-import {
-  ensureNormalizedSession,
-  readCodexSessionHeader,
-} from "./normalize.js";
+import { indexCodexProjects, findLatestCodexSession, findCodexSession } from "./indexer.js";
+import { ensureNormalizedSession, readCodexSessionHeader } from "./normalize.js";
 import { analyzeProject, formatReportJson } from "../../reporter.js";
 import { generateSuggestions, generateAgentsRules } from "../../suggestions.js";
 import { saveModel, loadModel, checkSession } from "../../model.js";
-import {
-  buildSessionTimeline,
-  renderCheckOutput,
-  renderAnalyzeOutput,
-} from "../../viz.js";
+import { buildSessionTimeline, renderCheckOutput, renderAnalyzeOutput } from "../../viz.js";
 import { TOP_SIGNALS_LIMIT } from "../../constants.js";
 
 interface CodexRunOptions {
@@ -32,9 +21,7 @@ export const runCodexCheck = async (
   sessionArg: string,
   options: CodexRunOptions,
 ): Promise<string> => {
-  let resolved:
-    | { rolloutPath: string; sessionId: string; cwd: string }
-    | undefined;
+  let resolved: { rolloutPath: string; sessionId: string; cwd: string } | undefined;
 
   if (sessionArg === "latest") {
     resolved = await findLatestCodexSession(options.project);
@@ -48,29 +35,18 @@ export const runCodexCheck = async (
 
   const header = await readCodexSessionHeader(resolved.rolloutPath);
   if (!header) {
-    throw new Error(
-      `Failed to read Codex session header: ${resolved.rolloutPath}`,
-    );
+    throw new Error(`Failed to read Codex session header: ${resolved.rolloutPath}`);
   }
 
-  const cachedPath = await ensureNormalizedSession(
-    resolved.rolloutPath,
-    header,
-  );
+  const cachedPath = await ensureNormalizedSession(resolved.rolloutPath, header);
   const savedModel = loadModel(options.dir, AGENT_NAME);
-  const result = await checkSession(
-    cachedPath,
-    resolved.sessionId,
-    savedModel,
-    AGENT_NAME,
-  );
+  const result = await checkSession(cachedPath, resolved.sessionId, savedModel, AGENT_NAME);
 
   if (options.json) {
     return JSON.stringify(result, null, 2);
   }
 
-  const { turns, healthPercentage, summary } =
-    await buildSessionTimeline(cachedPath);
+  const { turns, healthPercentage, summary } = await buildSessionTimeline(cachedPath);
 
   return renderCheckOutput(
     result.sessionId,
@@ -95,20 +71,14 @@ export const runCodexReport = async (
 
   for (let projectIndex = 0; projectIndex < projects.length; projectIndex++) {
     const project = projects[projectIndex];
-    options.onProgress?.(
-      projectIndex + 1,
-      projects.length,
-      project.projectPath,
-    );
+    options.onProgress?.(projectIndex + 1, projects.length, project.projectPath);
     const analysis = await analyzeProject(project);
     projectAnalyses.push(analysis);
   }
 
   projectAnalyses.sort((left, right) => left.overallScore - right.overallScore);
 
-  const allSignals = projectAnalyses.flatMap(
-    (projectAnalysis) => projectAnalysis.signals,
-  );
+  const allSignals = projectAnalyses.flatMap((projectAnalysis) => projectAnalysis.signals);
   const topSignals = allSignals
     .sort((left, right) => left.score - right.score)
     .slice(0, TOP_SIGNALS_LIMIT);
@@ -117,10 +87,7 @@ export const runCodexReport = async (
 
   const report: AnalysisReport = {
     generatedAt: new Date(),
-    totalSessions: projects.reduce(
-      (sum, project) => sum + project.totalSessions,
-      0,
-    ),
+    totalSessions: projects.reduce((sum, project) => sum + project.totalSessions, 0),
     totalProjects: projects.length,
     projects: projectAnalyses,
     topSignals,

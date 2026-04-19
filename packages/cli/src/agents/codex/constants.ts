@@ -4,12 +4,7 @@ import * as os from "node:os";
 export const CODEX_HOME = path.join(os.homedir(), ".codex");
 export const CODEX_SESSIONS_DIR = path.join(CODEX_HOME, "sessions");
 
-export const CODEX_CACHE_DIR = path.join(
-  os.homedir(),
-  ".cache",
-  "claude-doctor",
-  "codex",
-);
+export const CODEX_CACHE_DIR = path.join(os.homedir(), ".cache", "claude-doctor", "codex");
 
 export const CODEX_NORMALIZED_SESSION_VERSION = 1;
 

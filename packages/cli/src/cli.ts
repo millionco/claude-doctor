@@ -2,17 +2,8 @@
 
 import { Command } from "commander";
 import { generateReport, formatReportJson } from "./reporter.js";
-import {
-  saveModel,
-  loadModel,
-  checkSession,
-  findLatestSession,
-} from "./model.js";
-import {
-  buildSessionTimeline,
-  renderCheckOutput,
-  renderAnalyzeOutput,
-} from "./viz.js";
+import { saveModel, loadModel, checkSession, findLatestSession } from "./model.js";
+import { buildSessionTimeline, renderCheckOutput, renderAnalyzeOutput } from "./viz.js";
 import { generateAgentsRules } from "./suggestions.js";
 import { runCodexCheck, runCodexReport } from "./agents/codex/index.js";
 import { runDroidCheck, runDroidReport } from "./agents/droid/index.js";
@@ -71,11 +62,7 @@ program
     "[session]",
     "Session ID or .jsonl path to check a specific session (when first arg is an agent name)",
   )
-  .option(
-    "-a, --agent <name>",
-    "Agent to analyze (claude, codex, droid, pi)",
-    "claude",
-  )
+  .option("-a, --agent <name>", "Agent to analyze (claude, codex, droid, pi)", "claude")
   .option("-p, --project <path>", "Filter to a specific project path")
   .option("--rules", "Output rules for CLAUDE.md / AGENTS.md")
   .option("--save", "Save analysis model to .claude-doctor/")
@@ -111,9 +98,7 @@ program
       }
 
       if (!isSupportedAgent(agent)) {
-        console.error(
-          `Unknown agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(", ")}.`,
-        );
+        console.error(`Unknown agent: ${agent}. Supported: ${SUPPORTED_AGENTS.join(", ")}.`);
         process.exit(1);
       }
 
@@ -136,8 +121,7 @@ program
         const spinner = createSpinner();
         spinner.start("Checking session…");
 
-        const isFilePath =
-          sessionArg.includes("/") || sessionArg.endsWith(".jsonl");
+        const isFilePath = sessionArg.includes("/") || sessionArg.endsWith(".jsonl");
         let sessionFilePath: string;
         let sessionId: string;
 
@@ -157,11 +141,7 @@ program
         }
 
         const savedModel = loadModel(options.dir);
-        const result = await checkSession(
-          sessionFilePath,
-          sessionId,
-          savedModel,
-        );
+        const result = await checkSession(sessionFilePath, sessionId, savedModel);
 
         if (options.json) {
           spinner.stop();
@@ -169,8 +149,7 @@ program
           return;
         }
 
-        const { turns, healthPercentage, summary } =
-          await buildSessionTimeline(sessionFilePath);
+        const { turns, healthPercentage, summary } = await buildSessionTimeline(sessionFilePath);
 
         spinner.stop();
 
@@ -190,16 +169,10 @@ program
       const spinner = createSpinner();
       spinner.start("Scanning transcripts…");
 
-      const report = await generateReport(
-        options.project,
-        (current, total, projectName) => {
-          const shortName = projectName.replace(
-            /^Users\/[^/]+\/Developer\//,
-            "",
-          );
-          spinner.update(`Analyzing ${shortName} (${current}/${total})`);
-        },
-      );
+      const report = await generateReport(options.project, (current, total, projectName) => {
+        const shortName = projectName.replace(/^Users\/[^/]+\/Developer\//, "");
+        spinner.update(`Analyzing ${shortName} (${current}/${total})`);
+      });
 
       spinner.stop();
 
@@ -218,10 +191,7 @@ program
       }
 
       if (options.rules) {
-        const rulesText = generateAgentsRules(
-          report.projects,
-          report.totalSessions,
-        );
+        const rulesText = generateAgentsRules(report.projects, report.totalSessions);
         if (rulesText) {
           console.log(rulesText);
         } else {

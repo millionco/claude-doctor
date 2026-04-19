@@ -3,15 +3,15 @@
   "version": "0.0.3",
   "description": "Analyze Claude Code transcripts for quality signals, sentiment drift, and behavioral anti-patterns.",
   "keywords": [
+    "agents",
+    "ai",
+    "analysis",
     "claude",
     "claude-code",
-    "agents",
-    "sentiment",
-    "analysis",
-    "transcript",
+    "llm",
     "optimizer",
-    "ai",
-    "llm"
+    "sentiment",
+    "transcript"
   ],
   "homepage": "https://github.com/aidenybai/claude-doctor",
   "bugs": {

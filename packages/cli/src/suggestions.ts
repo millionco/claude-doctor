@@ -13,9 +13,7 @@ import {
   SUGGESTION_TURN_RATIO_MIN,
 } from "./constants.js";
 
-const aggregateSignals = (
-  projects: ProjectAnalysis[],
-): SignalAggregation[] => {
+const aggregateSignals = (projects: ProjectAnalysis[]): SignalAggregation[] => {
   const aggregations = new Map<string, SignalAggregation>();
 
   for (const project of projects) {
@@ -40,14 +38,10 @@ const aggregateSignals = (
     }
   }
 
-  return [...aggregations.values()].sort(
-    (left, right) => left.totalScore - right.totalScore,
-  );
+  return [...aggregations.values()].sort((left, right) => left.totalScore - right.totalScore);
 };
 
-export const generateSuggestions = (
-  projects: ProjectAnalysis[],
-): string[] => {
+export const generateSuggestions = (projects: ProjectAnalysis[]): string[] => {
   const suggestions: string[] = [];
   const aggregated = aggregateSignals(projects);
 
@@ -158,10 +152,7 @@ export const generateSuggestions = (
   return suggestions;
 };
 
-export const generateAgentsRules = (
-  projects: ProjectAnalysis[],
-  totalSessions: number,
-): string => {
+export const generateAgentsRules = (projects: ProjectAnalysis[], totalSessions: number): string => {
   const rules = generateSuggestions(projects);
 
   if (rules.length === 0) {
