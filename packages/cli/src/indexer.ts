@@ -14,8 +14,7 @@ import {
 const decodeProjectName = (encodedName: string): string =>
   encodedName.replace(/-/g, "/").replace(/^\//, "");
 
-export const getProjectsDir = (): string =>
-  path.join(os.homedir(), CLAUDE_PROJECTS_DIR);
+export const getProjectsDir = (): string => path.join(os.homedir(), CLAUDE_PROJECTS_DIR);
 
 export const discoverProjects = (projectsDir: string): string[] => {
   if (!fs.existsSync(projectsDir)) return [];
@@ -28,10 +27,7 @@ export const discoverProjects = (projectsDir: string): string[] => {
 export const discoverSessions = (projectDir: string): string[] =>
   fs
     .readdirSync(projectDir)
-    .filter(
-      (fileName) =>
-        fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"),
-    );
+    .filter((fileName) => fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"));
 
 export const buildSessionMetadata = async (
   filePath: string,
@@ -46,9 +42,7 @@ export const buildSessionMetadata = async (
   const interruptCount = countInterrupts(events);
   const { start, end } = getSessionTimeRange(events);
 
-  const assistantMessageCount = events.filter(
-    (event) => event.type === "assistant",
-  ).length;
+  const assistantMessageCount = events.filter((event) => event.type === "assistant").length;
 
   return {
     sessionId,
@@ -65,9 +59,7 @@ export const buildSessionMetadata = async (
   };
 };
 
-export const indexAllProjects = async (
-  projectFilter?: string,
-): Promise<ProjectMetadata[]> => {
+export const indexAllProjects = async (projectFilter?: string): Promise<ProjectMetadata[]> => {
   const projectsDir = getProjectsDir();
   const projectDirs = discoverProjects(projectsDir);
   const projects: ProjectMetadata[] = [];
@@ -86,20 +78,14 @@ export const indexAllProjects = async (
     for (const sessionFile of sessionFiles) {
       const filePath = path.join(projectDir, sessionFile);
       try {
-        const metadata = await buildSessionMetadata(
-          filePath,
-          decodedName,
-          encodedName,
-        );
+        const metadata = await buildSessionMetadata(filePath, decodedName, encodedName);
         sessions.push(metadata);
       } catch {
         /* skip unreadable session files */
       }
     }
 
-    sessions.sort(
-      (left, right) => left.startTime.getTime() - right.startTime.getTime(),
-    );
+    sessions.sort((left, right) => left.startTime.getTime() - right.startTime.getTime());
 
     projects.push({
       projectPath: decodedName,

@@ -50,9 +50,7 @@ export const analyzeSessionSentiment = async (
 
   const scores = messageScores.map((messageScore) => messageScore.score);
   const averageScore =
-    scores.length > 0
-      ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-      : 0;
+    scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
   const worstScore = scores.length > 0 ? Math.min(...scores) : 0;
 
   const frustrationMessages = messageScores
@@ -69,9 +67,7 @@ export const analyzeSessionSentiment = async (
   };
 };
 
-export const sentimentToSignals = (
-  sessionSentiment: SessionSentiment,
-): SignalResult[] => {
+export const sentimentToSignals = (sessionSentiment: SessionSentiment): SignalResult[] => {
   const signals: SignalResult[] = [];
 
   if (sessionSentiment.averageScore < SENTIMENT_NEGATIVE_THRESHOLD) {
@@ -93,7 +89,8 @@ export const sentimentToSignals = (
   if (sessionSentiment.interruptCount > 0) {
     signals.push({
       signalName: "user-interrupts",
-      severity: sessionSentiment.interruptCount >= INTERRUPT_CRITICAL_THRESHOLD ? "critical" : "high",
+      severity:
+        sessionSentiment.interruptCount >= INTERRUPT_CRITICAL_THRESHOLD ? "critical" : "high",
       score: -sessionSentiment.interruptCount * INTERRUPT_SCORE_MULTIPLIER,
       details: `User interrupted the agent ${sessionSentiment.interruptCount} time(s)`,
       sessionId: sessionSentiment.sessionId,

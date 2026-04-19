@@ -34,9 +34,7 @@ import {
   SNIPPET_LENGTH,
 } from "../constants.js";
 
-const extractConversationTurns = (
-  events: TranscriptEvent[],
-): ConversationTurn[] => {
+const extractConversationTurns = (events: TranscriptEvent[]): ConversationTurn[] => {
   const turns: ConversationTurn[] = [];
 
   for (const event of events) {
@@ -49,8 +47,7 @@ const extractConversationTurns = (
 
       const isToolResult = Array.isArray(content);
       const isInterrupt =
-        typeof content === "string" &&
-        /\[Request interrupted by user/.test(content);
+        typeof content === "string" && /\[Request interrupted by user/.test(content);
       const textContent = typeof content === "string" ? content : "";
       const contentLength = isToolResult ? 0 : textContent.length;
 
@@ -91,9 +88,7 @@ const extractConversationTurns = (
 const isMetaContent = (content: string): boolean =>
   META_MESSAGE_PATTERNS.some((pattern) => pattern.test(content));
 
-const extractUserTurns = (
-  turns: ConversationTurn[],
-): TimestampedUserMessage[] =>
+const extractUserTurns = (turns: ConversationTurn[]): TimestampedUserMessage[] =>
   turns
     .filter(
       (turn) =>
@@ -112,7 +107,13 @@ const extractUserTurns = (
     }));
 
 const wordSet = (text: string): Set<string> =>
-  new Set(text.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).filter(Boolean));
+  new Set(
+    text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .split(/\s+/)
+      .filter(Boolean),
+  );
 
 const jaccardSimilarity = (textA: string, textB: string): number => {
   const setA = wordSet(textA);
@@ -126,27 +127,19 @@ const jaccardSimilarity = (textA: string, textB: string): number => {
   return unionSize === 0 ? 0 : intersectionSize / unionSize;
 };
 
-const detectCorrectionPatterns = (
-  userTurns: TimestampedUserMessage[],
-): number => {
+const detectCorrectionPatterns = (userTurns: TimestampedUserMessage[]): number => {
   let correctionCount = 0;
   for (const turn of userTurns) {
-    const isCorrection = CORRECTION_PATTERNS.some((pattern) =>
-      pattern.test(turn.content),
-    );
+    const isCorrection = CORRECTION_PATTERNS.some((pattern) => pattern.test(turn.content));
     if (isCorrection) correctionCount++;
   }
   return correctionCount;
 };
 
-const detectKeepGoingLoops = (
-  userTurns: TimestampedUserMessage[],
-): number => {
+const detectKeepGoingLoops = (userTurns: TimestampedUserMessage[]): number => {
   let keepGoingCount = 0;
   for (const turn of userTurns) {
-    const isKeepGoing = KEEP_GOING_PATTERNS.some((pattern) =>
-      pattern.test(turn.content.trim()),
-    );
+    const isKeepGoing = KEEP_GOING_PATTERNS.some((pattern) => pattern.test(turn.content.trim()));
     if (isKeepGoing) keepGoingCount++;
   }
   return keepGoingCount;
@@ -161,11 +154,7 @@ const detectRepetition = (
     similarity: number;
   }> = [];
 
-  for (
-    let outerIndex = 0;
-    outerIndex < userTurns.length;
-    outerIndex++
-  ) {
+  for (let outerIndex = 0; outerIndex < userTurns.length; outerIndex++) {
     for (
       let innerIndex = outerIndex + 1;
       innerIndex < Math.min(outerIndex + REPETITION_LOOKAHEAD_WINDOW, userTurns.length);
@@ -191,8 +180,7 @@ const detectRepetition = (
 const detectSentimentDrift = (
   userTurns: TimestampedUserMessage[],
 ): { driftScore: number; isNegativeDrift: boolean } => {
-  if (userTurns.length < DRIFT_MIN_MESSAGES)
-    return { driftScore: 0, isNegativeDrift: false };
+  if (userTurns.length < DRIFT_MIN_MESSAGES) return { driftScore: 0, isNegativeDrift: false };
 
   const midpoint = Math.floor(userTurns.length / 2);
   const firstHalf = userTurns.slice(0, midpoint);
@@ -215,13 +203,12 @@ const detectSentimentDrift = (
   const secondCorrectionRate = correctionRate(secondHalf);
 
   const lengthShrinkage =
-    firstHalfAvgLength > 0
-      ? (firstHalfAvgLength - secondHalfAvgLength) / firstHalfAvgLength
-      : 0;
+    firstHalfAvgLength > 0 ? (firstHalfAvgLength - secondHalfAvgLength) / firstHalfAvgLength : 0;
 
   const correctionIncrease = secondCorrectionRate - firstCorrectionRate;
 
-  const driftScore = lengthShrinkage * DRIFT_LENGTH_WEIGHT + correctionIncrease * DRIFT_CORRECTION_WEIGHT;
+  const driftScore =
+    lengthShrinkage * DRIFT_LENGTH_WEIGHT + correctionIncrease * DRIFT_CORRECTION_WEIGHT;
 
   return {
     driftScore,
@@ -262,8 +249,7 @@ const detectFollowUpVelocity = (
 
   return {
     fastFollowUps,
-    averageResponseMs:
-      responseCount > 0 ? totalResponseMs / responseCount : 0,
+    averageResponseMs: responseCount > 0 ? totalResponseMs / responseCount : 0,
   };
 };
 
@@ -289,9 +275,7 @@ export const detectBehavioralSignals = async (
       details: `${correctionCount}/${userTurns.length} user messages (${Math.round(correctionRate * 100)}%) were corrections. The agent repeatedly misunderstands or produces wrong output.`,
       sessionId,
       examples: userTurns
-        .filter((turn) =>
-          CORRECTION_PATTERNS.some((pattern) => pattern.test(turn.content)),
-        )
+        .filter((turn) => CORRECTION_PATTERNS.some((pattern) => pattern.test(turn.content)))
         .slice(0, 5)
         .map((turn) => turn.content.slice(0, SNIPPET_LENGTH)),
     });
@@ -307,11 +291,7 @@ export const detectBehavioralSignals = async (
       details: `User said "keep going" or equivalent ${keepGoingCount} time(s). The agent stops prematurely or produces incomplete work.`,
       sessionId,
       examples: userTurns
-        .filter((turn) =>
-          KEEP_GOING_PATTERNS.some((pattern) =>
-            pattern.test(turn.content.trim()),
-          ),
-        )
+        .filter((turn) => KEEP_GOING_PATTERNS.some((pattern) => pattern.test(turn.content.trim())))
         .slice(0, 3)
         .map((turn) => turn.content.slice(0, SNIPPET_LENGTH)),
     });
@@ -359,12 +339,8 @@ export const detectBehavioralSignals = async (
     });
   }
 
-  const userTurnCount = turns.filter(
-    (turn) => turn.type === "user" && !turn.isToolResult,
-  ).length;
-  const assistantTurnCount = turns.filter(
-    (turn) => turn.type === "assistant",
-  ).length;
+  const userTurnCount = turns.filter((turn) => turn.type === "user" && !turn.isToolResult).length;
+  const assistantTurnCount = turns.filter((turn) => turn.type === "assistant").length;
 
   if (assistantTurnCount > 0 && userTurnCount > 0) {
     const turnRatio = userTurnCount / assistantTurnCount;

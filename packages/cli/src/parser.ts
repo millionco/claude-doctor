@@ -2,15 +2,12 @@ import * as fs from "node:fs";
 import * as readline from "node:readline";
 import { META_MESSAGE_PATTERNS, INTERRUPT_PATTERN, MAX_USER_MESSAGE_LENGTH } from "./constants.js";
 
-const isUserEvent = (event: TranscriptEvent): event is UserEvent =>
-  event.type === "user";
+const isUserEvent = (event: TranscriptEvent): event is UserEvent => event.type === "user";
 
 const isAssistantEvent = (event: TranscriptEvent): event is AssistantEvent =>
   event.type === "assistant";
 
-export const parseTranscriptFile = async (
-  filePath: string,
-): Promise<TranscriptEvent[]> => {
+export const parseTranscriptFile = async (filePath: string): Promise<TranscriptEvent[]> => {
   const events: TranscriptEvent[] = [];
   const stream = fs.createReadStream(filePath, { encoding: "utf-8" });
   const lineReader = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -36,9 +33,7 @@ export const extractUserMessages = (events: TranscriptEvent[]): string[] => {
     if (typeof content !== "string") continue;
     if (event.isMeta) continue;
 
-    const isMetaMessage = META_MESSAGE_PATTERNS.some((pattern) =>
-      pattern.test(content),
-    );
+    const isMetaMessage = META_MESSAGE_PATTERNS.some((pattern) => pattern.test(content));
     if (isMetaMessage) continue;
 
     if (content.length > MAX_USER_MESSAGE_LENGTH) continue;
@@ -118,9 +113,7 @@ export const countInterrupts = (events: TranscriptEvent[]): number => {
   return count;
 };
 
-export const getSessionTimeRange = (
-  events: TranscriptEvent[],
-): SessionTimeRange => {
+export const getSessionTimeRange = (events: TranscriptEvent[]): SessionTimeRange => {
   let earliest = Infinity;
   let latest = -Infinity;
 

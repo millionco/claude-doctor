@@ -1,9 +1,6 @@
 import { indexAllProjects } from "./indexer.js";
 import { detectAbandonment } from "./signals/abandonment.js";
-import {
-  analyzeSessionSentiment,
-  sentimentToSignals,
-} from "./signals/sentiment.js";
+import { analyzeSessionSentiment, sentimentToSignals } from "./signals/sentiment.js";
 import { detectThrashing } from "./signals/thrashing.js";
 import { detectErrorLoops } from "./signals/error-loops.js";
 import { detectToolInefficiency } from "./signals/tool-efficiency.js";
@@ -27,43 +24,26 @@ const SEVERITY_WEIGHTS: Record<string, number> = {
   low: SEVERITY_WEIGHT_LOW,
 };
 
-export const analyzeProject = async (
-  project: ProjectMetadata,
-): Promise<ProjectAnalysis> => {
+export const analyzeProject = async (project: ProjectMetadata): Promise<ProjectAnalysis> => {
   const signals: SignalResult[] = [];
 
   const abandonmentSignals = detectAbandonment(project.sessions);
   signals.push(...abandonmentSignals);
 
   for (const session of project.sessions) {
-    const sentiment = await analyzeSessionSentiment(
-      session.filePath,
-      session.sessionId,
-    );
+    const sentiment = await analyzeSessionSentiment(session.filePath, session.sessionId);
     signals.push(...sentimentToSignals(sentiment));
 
-    const thrashingSignals = await detectThrashing(
-      session.filePath,
-      session.sessionId,
-    );
+    const thrashingSignals = await detectThrashing(session.filePath, session.sessionId);
     signals.push(...thrashingSignals);
 
-    const errorLoopSignals = await detectErrorLoops(
-      session.filePath,
-      session.sessionId,
-    );
+    const errorLoopSignals = await detectErrorLoops(session.filePath, session.sessionId);
     signals.push(...errorLoopSignals);
 
-    const efficiencySignals = await detectToolInefficiency(
-      session.filePath,
-      session.sessionId,
-    );
+    const efficiencySignals = await detectToolInefficiency(session.filePath, session.sessionId);
     signals.push(...efficiencySignals);
 
-    const behavioralSignals = await detectBehavioralSignals(
-      session.filePath,
-      session.sessionId,
-    );
+    const behavioralSignals = await detectBehavioralSignals(session.filePath, session.sessionId);
     signals.push(...behavioralSignals);
   }
 
@@ -71,10 +51,8 @@ export const analyzeProject = async (
 
   const overallScore =
     signals.length > 0
-      ? signals.reduce(
-          (sum, signal) => sum + signal.score * SEVERITY_WEIGHTS[signal.severity],
-          0,
-        ) / project.totalSessions
+      ? signals.reduce((sum, signal) => sum + signal.score * SEVERITY_WEIGHTS[signal.severity], 0) /
+        project.totalSessions
       : 0;
 
   return {
@@ -102,9 +80,7 @@ export const generateReport = async (
 
   projectAnalyses.sort((left, right) => left.overallScore - right.overallScore);
 
-  const allSignals = projectAnalyses.flatMap(
-    (projectAnalysis) => projectAnalysis.signals,
-  );
+  const allSignals = projectAnalyses.flatMap((projectAnalysis) => projectAnalysis.signals);
   const topSignals = allSignals
     .sort((left, right) => left.score - right.score)
     .slice(0, TOP_SIGNALS_LIMIT);
@@ -113,10 +89,7 @@ export const generateReport = async (
 
   return {
     generatedAt: new Date(),
-    totalSessions: projects.reduce(
-      (sum, project) => sum + project.totalSessions,
-      0,
-    ),
+    totalSessions: projects.reduce((sum, project) => sum + project.totalSessions, 0),
     totalProjects: projects.length,
     projects: projectAnalyses,
     topSignals,
@@ -166,9 +139,7 @@ export const formatReportMarkdown = (report: AnalysisReport): string => {
 
   for (const project of report.projects.slice(0, REPORT_PROJECT_LIMIT)) {
     const signalCount = project.signals.length;
-    const criticalCount = project.signals.filter(
-      (signal) => signal.severity === "critical",
-    ).length;
+    const criticalCount = project.signals.filter((signal) => signal.severity === "critical").length;
 
     lines.push(
       `### ${project.projectName} (${project.sessionCount} sessions, score: ${project.overallScore.toFixed(1)})`,
@@ -189,9 +160,7 @@ export const formatReportMarkdown = (report: AnalysisReport): string => {
       }
 
       for (const [signalName, signalList] of byType) {
-        const worstScore = Math.min(
-          ...signalList.map((signal) => signal.score),
-        );
+        const worstScore = Math.min(...signalList.map((signal) => signal.score));
         lines.push(`- **${signalName}** x${signalList.length} (worst: ${worstScore})`);
       }
     }
@@ -211,5 +180,4 @@ export const formatReportMarkdown = (report: AnalysisReport): string => {
   return lines.join("\n");
 };
 
-export const formatReportJson = (report: AnalysisReport): string =>
-  JSON.stringify(report, null, 2);
+export const formatReportJson = (report: AnalysisReport): string => JSON.stringify(report, null, 2);

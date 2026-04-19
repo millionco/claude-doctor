@@ -50,10 +50,7 @@ export const detectErrorLoops = async (
           const snippet = resultText?.slice(0, ERROR_SNIPPET_MAX_LENGTH) ?? "unknown error";
           errorSnippets.push(snippet);
         } else {
-          if (
-            consecutiveFailures >= ERROR_LOOP_THRESHOLD &&
-            currentToolName
-          ) {
+          if (consecutiveFailures >= ERROR_LOOP_THRESHOLD && currentToolName) {
             errorSequences.push({
               toolName: currentToolName,
               consecutiveFailures,

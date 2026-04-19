@@ -1,15 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import {
-  CLAUDE_PROJECTS_DIR,
-  MODEL_TOP_ISSUES_LIMIT,
-  SAVED_MODEL_VERSION,
-} from "./constants.js";
-import {
-  analyzeSessionSentiment,
-  sentimentToSignals,
-} from "./signals/sentiment.js";
+import { CLAUDE_PROJECTS_DIR, MODEL_TOP_ISSUES_LIMIT, SAVED_MODEL_VERSION } from "./constants.js";
+import { analyzeSessionSentiment, sentimentToSignals } from "./signals/sentiment.js";
 import { detectThrashing } from "./signals/thrashing.js";
 import { detectErrorLoops } from "./signals/error-loops.js";
 import { detectToolInefficiency } from "./signals/tool-efficiency.js";
@@ -17,31 +10,52 @@ import { detectBehavioralSignals } from "./signals/behavioral.js";
 
 const MODEL_DIR = ".claude-doctor";
 const MODEL_FILE = "model.json";
-const GUIDANCE_FILE = "guidance.md";
 
 export const getModelDir = (projectRoot?: string): string => {
   const root = projectRoot ?? process.cwd();
   return path.join(root, MODEL_DIR);
 };
 
+const DEFAULT_AGENT = "claude";
+
+const getGuidanceFileName = (agent: string): string => `guidance-${agent}.md`;
+
+const readModelFile = (modelPath: string): { agents: Record<string, SavedModel> } => {
+  if (!fs.existsSync(modelPath)) {
+    return { agents: {} };
+  }
+
+  const content = fs.readFileSync(modelPath, "utf-8");
+  const parsed = JSON.parse(content);
+
+  if (parsed && typeof parsed === "object" && parsed.agents && typeof parsed.agents === "object") {
+    return { agents: parsed.agents as Record<string, SavedModel> };
+  }
+
+  return {
+    agents: {
+      [DEFAULT_AGENT]: parsed as SavedModel,
+    },
+  };
+};
+
 export const saveModel = (
   report: AnalysisReport,
   projectRoot?: string,
+  agent: string = DEFAULT_AGENT,
 ): string => {
   const modelDir = getModelDir(projectRoot);
   fs.mkdirSync(modelDir, { recursive: true });
 
   const signalBaselines: Record<string, number> = {};
   for (const signal of report.topSignals) {
-    signalBaselines[signal.signalName] =
-      (signalBaselines[signal.signalName] ?? 0) + 1;
+    signalBaselines[signal.signalName] = (signalBaselines[signal.signalName] ?? 0) + 1;
   }
 
   const projects: ProjectProfile[] = report.projects.map((project) => {
     const signalFrequency: Record<string, number> = {};
     for (const signal of project.signals) {
-      signalFrequency[signal.signalName] =
-        (signalFrequency[signal.signalName] ?? 0) + 1;
+      signalFrequency[signal.signalName] = (signalFrequency[signal.signalName] ?? 0) + 1;
     }
 
     return {
@@ -68,20 +82,29 @@ export const saveModel = (
   };
 
   const modelPath = path.join(modelDir, MODEL_FILE);
-  fs.writeFileSync(modelPath, JSON.stringify(model, null, 2));
+  const existing = readModelFile(modelPath);
+  existing.agents[agent] = model;
+  fs.writeFileSync(modelPath, JSON.stringify(existing, null, 2));
 
-  const guidancePath = path.join(modelDir, GUIDANCE_FILE);
+  const guidancePath = path.join(modelDir, getGuidanceFileName(agent));
   const guidance = buildGuidanceDoc(model);
   fs.writeFileSync(guidancePath, guidance);
 
   return modelDir;
 };
 
-export const loadModel = (projectRoot?: string): SavedModel | undefined => {
+export const loadModel = (
+  projectRoot?: string,
+  agent: string = DEFAULT_AGENT,
+): SavedModel | undefined => {
   const modelPath = path.join(getModelDir(projectRoot), MODEL_FILE);
-  if (!fs.existsSync(modelPath)) return undefined;
-  const content = fs.readFileSync(modelPath, "utf-8");
-  return JSON.parse(content) as SavedModel;
+
+  if (!fs.existsSync(modelPath)) {
+    return undefined;
+  }
+
+  const existing = readModelFile(modelPath);
+  return existing.agents[agent];
 };
 
 const buildGuidanceDoc = (model: SavedModel): string => {
@@ -104,13 +127,10 @@ const buildGuidanceDoc = (model: SavedModel): string => {
   lines.push("");
   lines.push("## Rules for This Session");
   lines.push("");
-  lines.push(
-    "If you notice yourself exhibiting any of these patterns, STOP and course-correct:",
-  );
+  lines.push("If you notice yourself exhibiting any of these patterns, STOP and course-correct:");
   lines.push("");
 
-  const hasSignal = (name: string) =>
-    (model.signalBaselines[name] ?? 0) > 0;
+  const hasSignal = (name: string) => (model.signalBaselines[name] ?? 0) > 0;
 
   if (hasSignal("edit-thrashing")) {
     lines.push(
@@ -169,6 +189,7 @@ export const checkSession = async (
   sessionFilePath: string,
   sessionId: string,
   savedModel?: SavedModel,
+  agent: string = DEFAULT_AGENT,
 ): Promise<CheckResult> => {
   const signals: SignalResult[] = [];
 
@@ -181,25 +202,17 @@ export const checkSession = async (
   const errorLoopSignals = await detectErrorLoops(sessionFilePath, sessionId);
   signals.push(...errorLoopSignals);
 
-  const efficiencySignals = await detectToolInefficiency(
-    sessionFilePath,
-    sessionId,
-  );
+  const efficiencySignals = await detectToolInefficiency(sessionFilePath, sessionId);
   signals.push(...efficiencySignals);
 
-  const behavioralSignals = await detectBehavioralSignals(
-    sessionFilePath,
-    sessionId,
-  );
+  const behavioralSignals = await detectBehavioralSignals(sessionFilePath, sessionId);
   signals.push(...behavioralSignals);
 
-  const guidance = buildSessionGuidance(signals, savedModel);
+  const guidance = buildSessionGuidance(signals, savedModel, agent);
 
   const isHealthy =
-    signals.filter(
-      (signal) =>
-        signal.severity === "critical" || signal.severity === "high",
-    ).length === 0;
+    signals.filter((signal) => signal.severity === "critical" || signal.severity === "high")
+      .length === 0;
 
   return {
     sessionId,
@@ -212,6 +225,7 @@ export const checkSession = async (
 const buildSessionGuidance = (
   signals: SignalResult[],
   savedModel?: SavedModel,
+  agent: string = DEFAULT_AGENT,
 ): string[] => {
   const guidance: string[] = [];
 
@@ -278,7 +292,7 @@ const buildSessionGuidance = (
     );
     if (matchingHistorical.length > 0) {
       guidance.push(
-        `This session is repeating known issues from past sessions: ${matchingHistorical.map((signal) => signal.signalName).join(", ")}. Check .claude-doctor/guidance.md for project-specific rules.`,
+        `This session is repeating known issues from past sessions: ${matchingHistorical.map((signal) => signal.signalName).join(", ")}. Check ${MODEL_DIR}/${getGuidanceFileName(agent)} for project-specific rules.`,
       );
     }
   }
@@ -309,10 +323,7 @@ export const findLatestSession = (
     const fullDir = path.join(projectsDir, projectDir);
     const files = fs
       .readdirSync(fullDir)
-      .filter(
-        (fileName) =>
-          fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"),
-      );
+      .filter((fileName) => fileName.endsWith(".jsonl") && !fileName.startsWith("agent-"));
 
     for (const file of files) {
       const filePath = path.join(fullDir, file);

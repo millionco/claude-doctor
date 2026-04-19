@@ -76,7 +76,7 @@ Based on analysis of 838 sessions. Paste into your CLAUDE.md or AGENTS.md.
 Writes a model to `.claude-doctor/`:
 
 - `model.json` signal baselines and project profiles
-- `guidance.md` agent-readable rules for hooks or CLAUDE.md inclusion
+- `guidance-<agent>.md` agent-specific rules for hooks or CLAUDE.md inclusion
 
 ## Development
 
